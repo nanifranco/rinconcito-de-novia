@@ -2,74 +2,29 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Ketris</title>
+    <title>Catris</title>
     <style>
-        :root {
-            --primary-color: #8b0000;
-            --secondary-color: #333;
-            --text-color: #e0e0e0;
-            --bg-color: #f0f0f0;
-        }
-        
         body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: var(--bg-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
+            background-image: url('images/bg.png');
         }
-        
-        .game-container {
-            position: relative;
-            width: 95%;
-            max-width: 800px;
-            height: 95vh;
-            max-height: 650px;
-            margin: auto;
-            background-color: #111;
-            border: 3px solid var(--primary-color);
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-        }
-        
-        .game-wrapper {
-            flex: 1;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-        }
-        
-        #gameFrame {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: #000;
-        }
-        
-        .fallback-content {
+
+        .gameCanvas {
+            border: 1px solid black;
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10;
         }
-        
-        /* Estilo unificado para ambos botones */
-        .volver-btn, .play-button {
+
+        #game {
+            width: 300px;
+            height: 600px;
+            position: absolute;
+            left: 50%;
+            margin-left: -150px;
+            margin-top: 3%;
+            float: left;
+            background-color: white;
+        }
+
+        .volver-btn {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
@@ -87,142 +42,609 @@
             z-index: 20;
             text-decoration: none;
             text-align: center;
+            bottom: 20px;
         }
 
-        .volver-btn:hover, .play-button:hover {
+        .volver-btn:hover {
             background: linear-gradient(to bottom, #333, #222);
             transform: translateX(-50%) translateY(-3px);
             box-shadow: 0 8px 15px rgba(139, 0, 0, 0.4);
         }
-        
-        /* Posicionamiento específico */
-        .volver-btn {
-            bottom: 20px;
-        }
-        
-        .play-button {
-            top: 50%;
-            transform: translate(-50%, -50%);
-        }
-        
-        .loader {
+
+        #controlBox {
+            width: 120px;
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 5px solid rgba(255, 255, 255, 0.1);
-            border-top: 5px solid var(--primary-color);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            z-index: 5;
+            float: right;
+            right: 50%;
+            margin-right: -300px;
+            margin-top: 3%;
         }
-        
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        
-        .status-message {
+
+        #controls {
             position: absolute;
-            top: 60%;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 0.9em;
-            opacity: 0.8;
+            margin-top: 30px;
+            width: 100px;
+        }
+
+        #controls > button {
+            margin: 0px 5px 5px 0px;
+        }
+
+        #nextBlock {
+            width: 120px;
+            height: 120px;
+            background-color: white;
+        }
+
+        #footer {
+            position: absolute;
+            bottom: 3%;
+            left: 3%;
+        }
+
+        #title {
+            position: absolute;
+            bottom: 80%;
+            left: -22%;
+        }
+
+        #blocker, #gameover {
+            display: none;
+            z-index: 100;
+            left: 1px;
+            top: 1px;
+            position: absolute;
+        }
+
+        #gameover {
+            opacity: 0.5;
+            z-index: 1000;
+        }
+
+        #directions {
+            position: absolute;
+            width: 300px;
+            bottom: 10%;
+            right: 5%;
+        }
+
+        #restart {
+            display: none;
         }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="game-container">
-        <div class="game-wrapper">
-            <div class="loader" id="loader"></div>
-            <span class="status-message" id="statusMessage">Cargando juego...</span>
-            
-            <iframe 
-                id="gameFrame" 
-                src="https://sweaters.itch.io/ketris/embed?dark=true&bg_color=000000" 
-                allowfullscreen 
-                allow="autoplay; fullscreen *; screen-wake-lock"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-            ></iframe>
-            
-            <div class="fallback-content" id="fallback">
-                <a href="https://sweaters.itch.io/ketris" class="play-button" target="_blank">Jugar ahora</a>
-            </div>
-        </div>
-        <button class="volver-btn" onclick="goBack()">Volver</button>
+    <div id='game'>
+        <canvas id="bg" class="gameCanvas" style="z-index: 1"></canvas>
+        <canvas id="fg" class="gameCanvas" style="z-index: 10"></canvas>
+        <div id="blocker"><img src="images/paused.png" /></div>
+        <div id="gameover"><img src="images/gameover.png" /></div>
     </div>
 
+    <div id='controlBox'>
+        <div id='nextBlock'>
+            <canvas id='next' class="gameCanvas" width="120" height="120"></canvas>
+        </div>
+        <div id='controls'>
+            <button id='start'>iniciar</button>
+            <button id='pause'>pausa</button>
+            <button id='restart'>volver a jugar</button>
+            <br/><br/>
+            <p>nivel: <span id='numLevel'>1</span></p>
+            <p>score: <span id='numScore'>0</span></p>
+        </div>
+    </div>
+
+    <div id="directions">
+        <h5>Como Jugar:</h5>
+        <p>Usa las flechitas de los lados para mover a los mininos</p>
+        <p>Usa la flecha de arriba para rotar al minino</p>
+        <p>Usa la flecha de abajo o el espacio para que el minino caiga más rápido</p>
+    </div>
+
+    <div id='footer'><img src='images/footer.png' /></div>
+    <div id='title'><img src='images/title.png' /></div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
     <script>
-        // Configuración inicial
-        const frame = document.getElementById('gameFrame');
-        const fallback = document.getElementById('fallback');
-        const loader = document.getElementById('loader');
-        const statusMessage = document.getElementById('statusMessage');
+        (function (e) { var o = "left", n = "right", d = "up", v = "down", c = "in", w = "out", l = "none", r = "auto", k = "swipe", s = "pinch", x = "tap", i = "doubletap", b = "longtap", A = "horizontal", t = "vertical", h = "all", q = 10, f = "start", j = "move", g = "end", p = "cancel", a = "ontouchstart" in window, y = "TouchSwipe"; var m = { fingers: 1, threshold: 75, cancelThreshold: null, pinchThreshold: 20, maxTimeThreshold: null, fingerReleaseThreshold: 250, longTapThreshold: 500, doubleTapThreshold: 200, swipe: null, swipeLeft: null, swipeRight: null, swipeUp: null, swipeDown: null, swipeStatus: null, pinchIn: null, pinchOut: null, pinchStatus: null, click: null, tap: null, doubleTap: null, longTap: null, triggerOnTouchEnd: true, triggerOnTouchLeave: false, allowPageScroll: "auto", fallbackToMouseEvents: true, excludedElements: "button, input, select, textarea, a, .noSwipe" }; e.fn.swipe = function (D) { var C = e(this), B = C.data(y); if (B && typeof D === "string") { if (B[D]) { return B[D].apply(this, Array.prototype.slice.call(arguments, 1)) } else { e.error("Method " + D + " does not exist on jQuery.swipe") } } else { if (!B && (typeof D === "object" || !D)) { return u.apply(this, arguments) } } return C }; e.fn.swipe.defaults = m; e.fn.swipe.phases = { PHASE_START: f, PHASE_MOVE: j, PHASE_END: g, PHASE_CANCEL: p }; e.fn.swipe.directions = { LEFT: o, RIGHT: n, UP: d, DOWN: v, IN: c, OUT: w }; e.fn.swipe.pageScroll = { NONE: l, HORIZONTAL: A, VERTICAL: t, AUTO: r }; e.fn.swipe.fingers = { ONE: 1, TWO: 2, THREE: 3, ALL: h }; function u(B) { if (B && (B.allowPageScroll === undefined && (B.swipe !== undefined || B.swipeStatus !== undefined))) { B.allowPageScroll = l } if (B.click !== undefined && B.tap === undefined) { B.tap = B.click } if (!B) { B = {} } B = e.extend({}, e.fn.swipe.defaults, B); return this.each(function () { var D = e(this); var C = D.data(y); if (!C) { C = new z(this, B); D.data(y, C) } }) } function z(a0, aq) { var av = (a || !aq.fallbackToMouseEvents), G = av ? "touchstart" : "mousedown", au = av ? "touchmove" : "mousemove", R = av ? "touchend" : "mouseup", P = av ? null : "mouseleave", az = "touchcancel"; var ac = 0, aL = null, Y = 0, aX = 0, aV = 0, D = 1, am = 0, aF = 0, J = null; var aN = e(a0); var W = "start"; var T = 0; var aM = null; var Q = 0, aY = 0, a1 = 0, aa = 0, K = 0; var aS = null; try { aN.bind(G, aJ); aN.bind(az, a5) } catch (ag) { e.error("events not supported " + G + "," + az + " on jQuery.swipe") } this.enable = function () { aN.bind(G, aJ); aN.bind(az, a5); return aN }; this.disable = function () { aG(); return aN }; this.destroy = function () { aG(); aN.data(y, null); return aN }; this.option = function (a8, a7) { if (aq[a8] !== undefined) { if (a7 === undefined) { return aq[a8] } else { aq[a8] = a7 } } else { e.error("Option " + a8 + " does not exist on jQuery.swipe.options") } }; function aJ(a9) { if (ax()) { return } if (e(a9.target).closest(aq.excludedElements, aN).length > 0) { return } var ba = a9.originalEvent ? a9.originalEvent : a9; var a8, a7 = a ? ba.touches[0] : ba; W = f; if (a) { T = ba.touches.length } else { a9.preventDefault() } ac = 0; aL = null; aF = null; Y = 0; aX = 0; aV = 0; D = 1; am = 0; aM = af(); J = X(); O(); if (!a || (T === aq.fingers || aq.fingers === h) || aT()) { ae(0, a7); Q = ao(); if (T == 2) { ae(1, ba.touches[1]); aX = aV = ap(aM[0].start, aM[1].start) } if (aq.swipeStatus || aq.pinchStatus) { a8 = L(ba, W) } } else { a8 = false } if (a8 === false) { W = p; L(ba, W); return a8 } else { ak(true) } } function aZ(ba) { var bd = ba.originalEvent ? ba.originalEvent : ba; if (W === g || W === p || ai()) { return } var a9, a8 = a ? bd.touches[0] : bd; var bb = aD(a8); aY = ao(); if (a) { T = bd.touches.length } W = j; if (T == 2) { if (aX == 0) { ae(1, bd.touches[1]); aX = aV = ap(aM[0].start, aM[1].start) } else { aD(bd.touches[1]); aV = ap(aM[0].end, aM[1].end); aF = an(aM[0].end, aM[1].end) } D = a3(aX, aV); am = Math.abs(aX - aV) } if ((T === aq.fingers || aq.fingers === h) || !a || aT()) { aL = aH(bb.start, bb.end); ah(ba, aL); ac = aO(bb.start, bb.end); Y = aI(); aE(aL, ac); if (aq.swipeStatus || aq.pinchStatus) { a9 = L(bd, W) } if (!aq.triggerOnTouchEnd || aq.triggerOnTouchLeave) { var a7 = true; if (aq.triggerOnTouchLeave) { var bc = aU(this); a7 = B(bb.end, bc) } if (!aq.triggerOnTouchEnd && a7) { W = ay(j) } else { if (aq.triggerOnTouchLeave && !a7) { W = ay(g) } } if (W == p || W == g) { L(bd, W) } } } else { W = p; L(bd, W) } if (a9 === false) { W = p; L(bd, W) } } function I(a7) { var a8 = a7.originalEvent; if (a) { if (a8.touches.length > 0) { C(); return true } } if (ai()) { T = aa } a7.preventDefault(); aY = ao(); Y = aI(); if (a6()) { W = p; L(a8, W) } else { if (aq.triggerOnTouchEnd || (aq.triggerOnTouchEnd == false && W === j)) { W = g; L(a8, W) } else { if (!aq.triggerOnTouchEnd && a2()) { W = g; aB(a8, W, x) } else { if (W === j) { W = p; L(a8, W) } } } } ak(false) } function a5() { T = 0; aY = 0; Q = 0; aX = 0; aV = 0; D = 1; O(); ak(false) } function H(a7) { var a8 = a7.originalEvent; if (aq.triggerOnTouchLeave) { W = ay(g); L(a8, W) } } function aG() { aN.unbind(G, aJ); aN.unbind(az, a5); aN.unbind(au, aZ); aN.unbind(R, I); if (P) { aN.unbind(P, H) } ak(false) } function ay(bb) { var ba = bb; var a9 = aw(); var a8 = aj(); var a7 = a6(); if (!a9 || a7) { ba = p } else { if (a8 && bb == j && (!aq.triggerOnTouchEnd || aq.triggerOnTouchLeave)) { ba = g } else { if (!a8 && bb == g && aq.triggerOnTouchLeave) { ba = p } } } return ba } function L(a9, a7) { var a8 = undefined; if (F() || S()) { a8 = aB(a9, a7, k) } else { if ((M() || aT()) && a8 !== false) { a8 = aB(a9, a7, s) } } if (aC() && a8 !== false) { a8 = aB(a9, a7, i) } else { if (al() && a8 !== false) { a8 = aB(a9, a7, b) } else { if (ad() && a8 !== false) { a8 = aB(a9, a7, x) } } } if (a7 === p) { a5(a9) } if (a7 === g) { if (a) { if (a9.touches.length == 0) { a5(a9) } } else { a5(a9) } } return a8 } function aB(ba, a7, a9) { var a8 = undefined; if (a9 == k) { aN.trigger("swipeStatus", [a7, aL || null, ac || 0, Y || 0, T]); if (aq.swipeStatus) { a8 = aq.swipeStatus.call(aN, ba, a7, aL || null, ac || 0, Y || 0, T); if (a8 === false) { return false } } if (a7 == g && aR()) { aN.trigger("swipe", [aL, ac, Y, T]); if (aq.swipe) { a8 = aq.swipe.call(aN, ba, aL, ac, Y, T); if (a8 === false) { return false } } switch (aL) { case o: aN.trigger("swipeLeft", [aL, ac, Y, T]); if (aq.swipeLeft) { a8 = aq.swipeLeft.call(aN, ba, aL, ac, Y, T) } break; case n: aN.trigger("swipeRight", [aL, ac, Y, T]); if (aq.swipeRight) { a8 = aq.swipeRight.call(aN, ba, aL, ac, Y, T) } break; case d: aN.trigger("swipeUp", [aL, ac, Y, T]); if (aq.swipeUp) { a8 = aq.swipeUp.call(aN, ba, aL, ac, Y, T) } break; case v: aN.trigger("swipeDown", [aL, ac, Y, T]); if (aq.swipeDown) { a8 = aq.swipeDown.call(aN, ba, aL, ac, Y, T) } break } } } if (a9 == s) { aN.trigger("pinchStatus", [a7, aF || null, am || 0, Y || 0, T, D]); if (aq.pinchStatus) { a8 = aq.pinchStatus.call(aN, ba, a7, aF || null, am || 0, Y || 0, T, D); if (a8 === false) { return false } } if (a7 == g && a4()) { switch (aF) { case c: aN.trigger("pinchIn", [aF || null, am || 0, Y || 0, T, D]); if (aq.pinchIn) { a8 = aq.pinchIn.call(aN, ba, aF || null, am || 0, Y || 0, T, D) } break; case w: aN.trigger("pinchOut", [aF || null, am || 0, Y || 0, T, D]); if (aq.pinchOut) { a8 = aq.pinchOut.call(aN, ba, aF || null, am || 0, Y || 0, T, D) } break } } } if (a9 == x) { if (a7 === p || a7 === g) { clearTimeout(aS); if (V() && !E()) { K = ao(); aS = setTimeout(e.proxy(function () { K = null; aN.trigger("tap", [ba.target]); if (aq.tap) { a8 = aq.tap.call(aN, ba, ba.target) } }, this), aq.doubleTapThreshold) } else { K = null; aN.trigger("tap", [ba.target]); if (aq.tap) { a8 = aq.tap.call(aN, ba, ba.target) } } } } else { if (a9 == i) { if (a7 === p || a7 === g) { clearTimeout(aS); K = null; aN.trigger("doubletap", [ba.target]); if (aq.doubleTap) { a8 = aq.doubleTap.call(aN, ba, ba.target) } } } else { if (a9 == b) { if (a7 === p || a7 === g) { clearTimeout(aS); K = null; aN.trigger("longtap", [ba.target]); if (aq.longTap) { a8 = aq.longTap.call(aN, ba, ba.target) } } } } } return a8 } function aj() { var a7 = true; if (aq.threshold !== null) { a7 = ac >= aq.threshold } return a7 } function a6() { var a7 = false; if (aq.cancelThreshold !== null && aL !== null) { a7 = (aP(aL) - ac) >= aq.cancelThreshold } return a7 } function ab() { if (aq.pinchThreshold !== null) { return am >= aq.pinchThreshold } return true } function aw() { var a7; if (aq.maxTimeThreshold) { if (Y >= aq.maxTimeThreshold) { a7 = false } else { a7 = true } } else { a7 = true } return a7 } function ah(a7, a8) { if (aq.allowPageScroll === l || aT()) { a7.preventDefault() } else { var a9 = aq.allowPageScroll === r; switch (a8) { case o: if ((aq.swipeLeft && a9) || (!a9 && aq.allowPageScroll != A)) { a7.preventDefault() } break; case n: if ((aq.swipeRight && a9) || (!a9 && aq.allowPageScroll != A)) { a7.preventDefault() } break; case d: if ((aq.swipeUp && a9) || (!a9 && aq.allowPageScroll != t)) { a7.preventDefault() } break; case v: if ((aq.swipeDown && a9) || (!a9 && aq.allowPageScroll != t)) { a7.preventDefault() } break } } } function a4() { var a8 = aK(); var a7 = U(); var a9 = ab(); return a8 && a7 && a9 } function aT() { return !!(aq.pinchStatus || aq.pinchIn || aq.pinchOut) } function M() { return !!(a4() && aT()) } function aR() { var ba = aw(); var bc = aj(); var a9 = aK(); var a7 = U(); var a8 = a6(); var bb = !a8 && a7 && a9 && bc && ba; return bb } function S() { return !!(aq.swipe || aq.swipeStatus || aq.swipeLeft || aq.swipeRight || aq.swipeUp || aq.swipeDown) } function F() { return !!(aR() && S()) } function aK() { return ((T === aq.fingers || aq.fingers === h) || !a) } function U() { return aM[0].end.x !== 0 } function a2() { return !!(aq.tap) } function V() { return !!(aq.doubleTap) } function aQ() { return !!(aq.longTap) } function N() { if (K == null) { return false } var a7 = ao(); return (V() && ((a7 - K) <= aq.doubleTapThreshold)) } function E() { return N() } function at() { return ((T === 1 || !a) && (isNaN(ac) || ac === 0)) } function aW() { return ((Y > aq.longTapThreshold) && (ac < q)) } function ad() { return !!(at() && a2()) } function aC() { return !!(N() && V()) } function al() { return !!(aW() && aQ()) } function C() { a1 = ao(); aa = event.touches.length + 1 } function O() { a1 = 0; aa = 0 } function ai() { var a7 = false; if (a1) { var a8 = ao() - a1; if (a8 <= aq.fingerReleaseThreshold) { a7 = true } } return a7 } function ax() { return !!(aN.data(y + "_intouch") === true) } function ak(a7) { if (a7 === true) { aN.bind(au, aZ); aN.bind(R, I); if (P) { aN.bind(P, H) } } else { aN.unbind(au, aZ, false); aN.unbind(R, I, false); if (P) { aN.unbind(P, H, false) } } aN.data(y + "_intouch", a7 === true) } function ae(a8, a7) { var a9 = a7.identifier !== undefined ? a7.identifier : 0; aM[a8].identifier = a9; aM[a8].start.x = aM[a8].end.x = a7.pageX || a7.clientX; aM[a8].start.y = aM[a8].end.y = a7.pageY || a7.clientY; return aM[a8] } function aD(a7) { var a9 = a7.identifier !== undefined ? a7.identifier : 0; var a8 = Z(a9); a8.end.x = a7.pageX || a7.clientX; a8.end.y = a7.pageY || a7.clientY; return a8 } function Z(a8) { for (var a7 = 0; a7 < aM.length; a7++) { if (aM[a7].identifier == a8) { return aM[a7] } } } function af() { var a7 = []; for (var a8 = 0; a8 <= 5; a8++) { a7.push({ start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, identifier: 0 }) } return a7 } function aE(a7, a8) { a8 = Math.max(a8, aP(a7)); J[a7].distance = a8 } function aP(a7) { return J[a7].distance } function X() { var a7 = {}; a7[o] = ar(o); a7[n] = ar(n); a7[d] = ar(d); a7[v] = ar(v); return a7 } function ar(a7) { return { direction: a7, distance: 0 } } function aI() { return aY - Q } function ap(ba, a9) { var a8 = Math.abs(ba.x - a9.x); var a7 = Math.abs(ba.y - a9.y); return Math.round(Math.sqrt(a8 * a8 + a7 * a7)) } function a3(a7, a8) { var a9 = (a8 / a7) * 1; return a9.toFixed(2) } function an() { if (D < 1) { return w } else { return c } } function aO(a8, a7) { return Math.round(Math.sqrt(Math.pow(a7.x - a8.x, 2) + Math.pow(a7.y - a8.y, 2))) } function aA(ba, a8) { var a7 = ba.x - a8.x; var bc = a8.y - ba.y; var a9 = Math.atan2(bc, a7); var bb = Math.round(a9 * 180 / Math.PI); if (bb < 0) { bb = 360 - Math.abs(bb) } return bb } function aH(a8, a7) { var a9 = aA(a8, a7); if ((a9 <= 45) && (a9 >= 0)) { return o } else { if ((a9 <= 360) && (a9 >= 315)) { return o } else { if ((a9 >= 135) && (a9 <= 225)) { return n } else { if ((a9 > 45) && (a9 < 135)) { return v } else { return d } } } } } function ao() { var a7 = new Date(); return a7.getTime() } function aU(a7) { a7 = e(a7); var a9 = a7.offset(); var a8 = { left: a9.left, right: a9.left + a7.outerWidth(), top: a9.top, bottom: a9.top + a7.outerHeight() }; return a8 } function B(a7, a8) { return (a7.x > a8.left && a7.x < a8.right && a7.y > a8.top && a7.y < a8.bottom) } } })(jQuery);
+        {{JQUERY_SWIPE_HERE}}
+    </script>
+
+    <script>
+        var bgCanvas;
+var fgCanvas;
+var context;
+var fgContext;
+var nextCanvas;
+var nextContext;
+var size = 30;
+var ticker = null;
+var gameStates = {OFF: 0, PAUSED: 1, ON: 2};
+var gridcolor = '#eeeeee';
+var shapes = {
+    i: [[['0/i_01',0,0,0],['0/i_02',0,0,0],['0/i_03',0,0,0],['0/i_04',0,0,0]],
+        [[0,0,0,0],['90/i_04','90/i_03','90/i_02','90/i_01'],[0,0,0,0],[0,0,0,0]],
+        [[0,0,'180/i_04',0],[0,0,'180/i_03',0],[0,0,'180/i_02',0],[0,0,'180/i_01',0]],
+        [[0,0,0,0],[0,0,0,0],['270/i_01','270/i_02','270/i_03','270/i_04'],[0,0,0,0]]],
+    
+    o: [[['0/o_01','0/o_02',0,0],['0/o_03','0/o_04',0,0],[0,0,0,0],[0,0,0,0]],
+        [['90/o_03','90/o_01',0,0],['90/o_04','90/o_02',0,0],[0,0,0,0],[0,0,0,0]],
+        [['180/o_04','180/o_03',0,0],['180/o_02','180/o_01',0,0],[0,0,0,0],[0,0,0,0]],
+        [['270/o_02','270/o_04',0,0],['270/o_01','270/o_03',0,0],[0,0,0,0],[0,0,0,0]]],
+    
+    l: [[[0,0,'0/l_01',0],['0/l_02','0/l_03','0/l_04',0],[0,0,0,0],[0,0,0,0]],
+        [[0,'90/l_02',0,0],[0,'90/l_03',0,0],[0,'90/l_04','90/l_01',0],[0,0,0,0]],
+        [[0,0,0,0],['180/l_04','180/l_03','180/l_02',0],['180/l_01',0,0,0],[0,0,0,0]],
+        [['270/l_01','270/l_04',0,0],[0,'270/l_03',0,0],[0,'270/l_02',0,0],[0,0,0,0]]],
+    
+    j: [[['0/j_01',0,0,0],['0/j_02','0/j_03','0/j_04',0],[0,0,0,0],[0,0,0,0]],
+        [[0,'90/j_02','90/j_01',0],[0,'90/j_03',0,0],[0,'90/j_04',0,0],[0,0,0,0]],
+        [[0,0,0,0],['180/j_04','180/j_03','180/j_02',0],[0,0,'180/j_01',0],[0,0,0,0]],
+        [[0,'270/j_04',0,0],[0,'270/j_03',0,0],['270/j_01','270/j_02',0,0],[0,0,0,0]]],
+    
+    t: [[[0,'0/t_01',0,0],[0,'0/t_02','0/t_03',0],[0,'0/t_04',0,0],[0,0,0,0]],
+        [[0,0,0,0],['90/t_04','90/t_02','90/t_01',0],[0,'90/t_03',0,0],[0,0,0,0]],
+        [[0,'180/t_04',0,0],['180/t_03','180/t_02',0,0],[0,'180/t_01',0,0],[0,0,0,0]],
+        [[0,'270/t_03',0,0],['270/t_01','270/t_02','270/t_04',0],[0,0,0,0],[0,0,0,0]]],
+    
+    s: [[['0/s_01',0,0,0],['0/s_02','0/s_03',0,0],[0,'0/s_04',0,0],[0,0,0,0]],
+        [[0,'90/s_02','90/s_01',0],['90/s_04','90/s_03',0,0],[0,0,0,0],[0,0,0,0]],
+        [[0,'180/s_04',0,0],[0,'180/s_03','180/s_02',0],[0,0,'180/s_01',0],[0,0,0,0]],
+        [[0,0,0,0],[0,'270/s_03','270/s_04',0],['270/s_01','270/s_02',0,0],[0,0,0,0]]],
+    
+    z: [[[0,0,'0/z_01',0],[0,'0/z_02','0/z_03',0],[0,'0/z_04',0,0],[0,0,0,0]],
+        [[0,0,0,0],['90/z_04','90/z_02',0,0],[0,'90/z_03','90/z_01',0],[0,0,0,0]],
+        [[0,0,'180/z_04',0],[0,'180/z_03','180/z_02',0],[0,'180/z_01',0,0],[0,0,0,0]],
+        [[0,0,0,0],['270/z_01','270/z_03',0,0],[0,'270/z_02','270/z_04',0],[0,0,0,0]]],
+};
+
+var imgCache = {};
+
+current = {
+    shape: null,
+    x: 4,
+    y: 0,
+    r: 0,
+    countdown: 2,
+    next: null
+};
+
+var tetris = {
+    unpressed: true,
+    score: 0,
+    lines: 0,
+    speed: 800, //ms per tick
+    level: 1,
+    state: gameStates.OFF,
+
+    init: function () {
+        tetris.state = gameStates.OFF,
+        tetris.score = 0;
+        tetris.lines = 0;
+        tetris.level = 1;
+        tetris.tetris = 800;
+
+        current = {
+            shape: null,
+            x: 4,
+            y: 0,
+            r: 0,
+            countdown: 2,
+            next: null
+        };
+
+        tetris.matrix = [[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],  //this is what happens when you're too lazy to check for bounds
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]];
+
+        tetris.nextShape(); //twice to set next as well as current shape
+        tetris.nextShape();
+        tetris.drawGrid(nextCanvas);
+        tetris.drawGrid(bgCanvas);
+        tetris.drawGrid(fgCanvas);
+        ticker = window.setInterval(tetris.tick, tetris.speed);
+        //init handlers
         
-        function initGame() {
-            frame.onload = function() {
-                checkFrameContent();
-            };
-            
-            setTimeout(checkFrameContent, 3000);
-            
-            const observer = new MutationObserver(checkFrameContent);
-            observer.observe(frame, { attributes: true, childList: true });
-            
-            window.addEventListener('message', handleFrameMessage);
-        }
+        $(document).on('keydown.startpause', function (e) {
+            switch (e.keyCode) { //start and pause
+                case 80: //p or P
+                case 112: {
+                    tetris.pause();
+                    break;
+                }
+                case 83: //s or S
+                case 115: {
+                    tetris.start();
+                    break;
+                }
+            }
+        });
+    },
+    bindHandlers: function () {
+        //buttons
+        $('#leftButton').click(function(){tetris.move('left')});
+        $('#rightButton').click(function(){tetris.move('right')});
+        $('#upButton').click(tetris.rotate);
+        $('#downButton').click(tetris.drop);
+
+        //touch
+        $(document).swipe({
+            swipeLeft: function (event, direction, distance, duration, fingerCount) {
+                tetris.move('left');
+            },
+            swipeRight: function (event, direction, distance, duration, fingerCount) {
+                tetris.move('right');
+            },
+            swipeUp: function (event, direction, distance, duration, fingerCount) {
+                tetris.rotate();
+            },
+            swipeDown: function (event, direction, distance, duration, fingerCount) {
+                tetris.drop();
+            }
+        });
         
-        function checkFrameContent() {
-            try {
-                if (frame.contentDocument && frame.contentDocument.body) {
-                    const body = frame.contentDocument.body;
-                    if (body.innerHTML.includes('iframe') || 
-                        body.offsetHeight > 100 || 
-                        body.querySelector('canvas, embed, object')) {
-                        hideLoader();
-                        return;
+        //keyboard
+        $(document).on('keydown.controls', function (e) {
+
+            var key = { space: 32, left: 37, up: 38, right: 39, down: 40 };
+
+            if (tetris.unpressed) {
+                switch (e.keyCode) {
+                    case key.left: {//left
+                        //tetris.removeSelf();
+                        tetris.move('left');
+                        break;
+                    }
+                    case key.right: {//right
+                        //tetris.removeSelf();
+                        tetris.move('right');
+                        break;
+                    }
+                    case key.down: {//down
+                        //tetris.removeSelf();
+                        tetris.down();
+                        break;
+                    }
+                    case key.up: {//up
+                        //tetris.removeSelf();
+                        tetris.rotate();
+                        break;
+                    }
+                    case key.space: {//space
+                        //tetris.removeSelf();
+                        tetris.drop();
+                        break;
                     }
                 }
-            } catch (e) {
-                console.log("Error al verificar contenido:", e);
+                tetris.unpressed = true;
             }
-            showFallback();
-        }
-        
-        function handleFrameMessage(event) {
-            if (event.data === 'gameLoaded') {
-                hideLoader();
-            }
-        }
-        
-        function hideLoader() {
-            loader.style.display = 'none';
-            statusMessage.style.display = 'none';
-        }
-        
-        function showFallback() {
-            frame.style.display = 'none';
-            fallback.style.display = 'flex';
-            hideLoader();
-        }
-        
-        function goBack() {
-            window.history.back();
-        }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            initGame();
-            setTimeout(function() {
-                if (loader.style.display !== 'none') {
-                    showFallback();
-                }
-            }, 5000);
+
         });
+    },
+    cacheMeUp: function () {
+        //cache me up, before you go-go     
+        var rotations = ['0', '90', '180', '270'];
+        for (var r = 0; r <= 3; r++) {
+            for (var key in shapes) {
+                var obj = shapes[key];
+                for (var i = 1; i <= 4; i++) {
+                    var img = new Image();
+                    img.src = 'images/' + rotations[r] + '/' + key + '_0' + i + '.png';
+                    imgCache[rotations[r] + '/' + key + '_0' + i] = img;
+                }
+            }
+        }
+    },
+    draw: function () {
+        fgContext = fgCanvas.getContext('2d');
+        fgContext.clearRect(0, 0, fgCanvas.width, fgCanvas.height);
+        for (m = 0; m < 4; m++) {   //row first (y=m)
+            for (n = 0; n < 4; n++) {   //then column (x=n)
+                //iterate through each cell of the 4x4
+                if (current.shape[current.r][m][n]) {   //if the cell is nonzero for the shape\\
+                    fgContext.drawImage(imgCache[current.shape[current.r][m][n]], (current.x + n) * size, (current.y + m) * size, size, size);
+                }
+            }
+        }
+    },
+    drawGrid: function (c) {
+        ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        ctx.strokeStyle = gridcolor;
+        ctx.lineWidth = 1;
+        var n;
+        ctx.beginPath();
+        for (n = .5; n <= bgCanvas.width + .5; n += size) {
+            ctx.moveTo(n, 0);
+            ctx.lineTo(n, bgCanvas.height);
+        }
+        for (n = .5; n <= bgCanvas.height + .5; n += size) {
+            ctx.moveTo(0, n);
+            ctx.lineTo(bgCanvas.width, n);
+        }
+        ctx.stroke();
+    },
+    drawNext: function () {
+        nextContext = nextCanvas.getContext('2d');
+        nextContext.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+        tetris.drawGrid(nextCanvas);
+        for (m = 0; m < 4; m++) {   //row first (y=m)
+            for (n = 0; n < 4; n++) {   //then column (x=n)
+                //iterate through each cell of the 4x4
+                if (current.next[0][m][n]) {    //if the cell is nonzero for the shape
+                    nextContext.drawImage(imgCache[current.next[0][m][n]], n * size, m * size, size, size);
+                }
+            }
+        }
+    },
+    tick: function () {
+        tetris.down();
+    },
+    drop: function () {
+        //keypress: spacebar
+        //drops a piece to end, if possible
+        if(tetris.state == gameStates.ON){
+            var x0 = current.x;
+            var y0 = current.y;
+            while (tetris.canMove(current.r, x0, y0 + 1)) {
+                var y0 = y0 + 1;    //how low can you go?
+            }
+            current.y = y0; //this low
+            tetris.draw(current.r, current.x, current.y);
+            current.countdown--;
+        }
+
+    },
+    removeSelf: function (r, x, y) {
+        //erases from old position
+        for (m = 0; m < 4; m++) {   //row first (y=m)
+            for (n = 0; n < 4; n++) {   //then column (x=n)
+                //iterate through each cell of the 4x4
+                if (current.shape[r][m][n]) {   //if the cell is nonzero for the shape
+                    tetris.matrix[y + m][x + n + 1] = 0;
+                    tetris.repaint(x + n, y + m);
+                }
+            }
+        }
+    },
+    move: function (dir) {
+        //moves the block if there's no collision and if game is going on
+        //tetris.removeSelf(current.r,current.x,current.y);
+        if(tetris.state == gameStates.ON){
+            var y0 = current.y;
+            var x0 = current.x + ((dir == "left") ? -1 : 1);
+            if (tetris.canMove(current.r, x0, y0)) {
+                current.x = x0;
+                current.y = y0;
+            }
+            tetris.draw(current.r, current.x, current.y);
+        }
+    },
+    down: function () {
+        //moves the block if there's no collision
+        if(tetris.state == gameStates.ON){
+            var x0 = current.x;
+            var y0 = current.y + 1;
+            if (tetris.canMove(current.r, x0, y0)) {
+                current.x = x0;
+                current.y = y0;
+            }
+            else {
+                if (--current.countdown <= 0) {
+                    tetris.touchdown(tetris.refresh);
+                }
+            }
+            tetris.draw(current.r, current.x, current.y);
+        }
+    },
+    canMove: function (r0, x0, y0) {
+        //is someone in my way?
+        var m, n;
+        for (m = 0; m < 4; m++) {
+            for (n = 0; n < 4; n++) {
+                if (current.shape[r0][m][n] && tetris.matrix[y0 + m][x0 + n + 1]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    },
+    rotate: function () {
+        if(tetris.state == gameStates.ON){
+            var r0 = (current.r + 1) % 4;
+            if (tetris.canMove(r0, current.x, current.y)) {
+                current.r = r0;
+            }
+            tetris.draw(current.r, current.x, current.y);
+        }
+    },
+    touchdown: function (rf) {
+        tetris.update(current.r, current.x, current.y, tetris.clearLines);
+        tetris.nextShape();
+        tetris.drawNext();
+        tetris.updateGame();
+        rf();
+    },
+    clearLines: function () {
+        var y = 19;
+        var numCleared = 0;
+        while (y > 0) {
+            if ($.inArray(0, tetris.matrix[y]) == -1) {
+                //line is full
+                tetris.matrix.splice(y, 1);
+                tetris.matrix.unshift([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+                numCleared++;
+            }
+            else {
+                y--;
+            }
+        }
+        if (numCleared) {
+            tetris.lines = tetris.lines + numCleared;
+            if (Math.floor(tetris.lines / 10) > tetris.level) {
+                tetris.level++;
+                tetris.speed * .9;
+            }
+            var multiplier;
+
+            switch (numCleared) {
+                case 1: multiplier = 40; break;
+                case 2: multiplier = 100; break;
+                case 3: multiplier = 300; break;
+                case 4: multiplier = 1200; break;
+            }
+
+            tetris.score = tetris.score + tetris.level * multiplier * numCleared;
+            window.clearInterval(ticker);
+            ticker = window.setInterval(tetris.tick, tetris.speed);
+        }
+
+    },
+    updateGame: function () {
+        $('#numLevel').html(tetris.level);
+        $('#numScore').html(tetris.score);
+    },
+    nextShape: function () {
+        if (!current.shape || tetris.canMove(0, 4, 0)) {
+            //update the current shape
+            current.shape = current.next;
+            current.x = 4;
+            current.y = 0;
+            current.r = 0;
+            current.countdown = 2;
+
+            //generates a new next shape
+            var l = Object.keys(shapes).length;
+            var r = Math.floor(Math.random() * l);
+            var s = Object.keys(shapes)[r];
+            current.next = shapes[s];
+        }
+        else {
+            tetris.pause();
+            $('#blocker')[0].style.display = 'none';
+            $('#gameover')[0].style.display = 'block';
+            $('#start').hide();
+            $('#restart').show();
+        }
+    },
+    update: function (r, x, y, cl) {
+        //updates position of current block
+        var m, n;
+        for (m = 0; m < 4; m++) {   //row first (y=m)
+            for (n = 0; n < 4; n++) {   //then column (x=n)
+                //iterate through each cell of the 4x4
+                if (current.shape[r][m][n]) {   //if the cell is nonzero for the shape
+                    tetris.matrix[y + m][x + n + 1] = current.shape[r][m][n];
+                    tetris.repaint(x + n, y + m);
+                }
+            }
+        }
+        cl();
+    },
+    repaint: function (x, y) {
+        //maps cats to the matrix on canvas
+        context.strokeStyle = gridcolor;
+        context.lineWidth = 1;
+        if (!tetris.matrix[y][x + 1] || tetris.matrix[y][x + 1] == 1) {
+            context.clearRect(x * size, y * size, size, size);
+            context.strokeRect(x * size, y * size, size, size);
+        }
+        else {
+            context.clearRect(x * size, y * size, size, size);
+            if (imgCache[tetris.matrix[y][x + 1]]) {
+                context.drawImage(imgCache[tetris.matrix[y][x + 1]], x * size, y * size, size, size);
+            }
+            else {
+                var img = new Image();
+                img.src = 'img/' + tetris.matrix[y][x + 1] + '.png';
+                img.onload = function () {
+                    context.drawImage(img, x * size, y * size, size, size);
+                };
+            }
+        }
+    },
+    refresh: function () {
+        var m, n;
+        var count = 0;
+        for (m = 0; m < tetris.matrix.length; m++) {    //row first (y=m)
+            for (n = 0; n < tetris.matrix[0].length; n++) { //then column (x=n)
+                tetris.repaint(n, m);
+                count++;
+            }
+        }
+    },
+    start: function () {
+        tetris.state = gameStates.ON;
+        $("#start").hide();
+        $("#pause").show();
+        $('#blocker')[0].style.display = 'none';
+        tetris.drawNext();
+    },
+    pause: function () {
+        tetris.state = gameStates.PAUSED;
+        $("#pause").hide();
+        $("#start").show();
+        $('#blocker')[0].style.display = 'block';
+    },
+    reset: function () {
+        $('#gameover')[0].style.display = 'none';
+        $('#restart').hide();
+        window.clearInterval(ticker);
+        ticker = null;
+        tetris.init();
+        tetris.updateGame();
+        tetris.start();
+        
+    },
+}
+$(document).ready(function(){
+    tetris.cacheMeUp();
+
+    bgCanvas = $('#bg')[0];
+    bgCanvas.width = 10*size;
+    bgCanvas.height = 20*size;
+    context = bgCanvas.getContext('2d');
+
+    fgCanvas = $('#fg')[0];
+    fgCanvas.width = 10*size;
+    fgCanvas.height = 20*size;
+    fgContext = fgCanvas.getContext('2d');
+
+    nextCanvas = $('#next')[0];
+    nextCanvas.width = nextCanvas.height = 4*size;
+    nextContext = nextCanvas.getContext('2d');
+
+    tetris.init();
+    tetris.bindHandlers();
+    $('#start').click(tetris.start);
+    $('#pause').click(tetris.pause);
+    $('#restart').click(tetris.reset);
+
+});
+
+        {{CATRIS_JS_HERE}}
     </script>
+
+    <button class="volver-btn" onclick="history.back()">Volver</button>
 </body>
 </html>
