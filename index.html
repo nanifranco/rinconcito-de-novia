@@ -576,6 +576,97 @@
                 font-size: 0.8em;
             }
         }
+
+        /* ── Películas / Cine IA ─────────────────────────────────── */
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .cine-chip {
+            display: inline-block;
+            background: rgba(20, 5, 5, 0.9);
+            border: 1px solid rgba(139, 0, 0, 0.35);
+            color: var(--color-texto);
+            padding: 4px 10px;
+            font-size: 0.72em;
+            font-family: 'Cinzel Decorative', cursive;
+        }
+        .cine-chip-btn {
+            display: inline-block;
+            background: rgba(20, 5, 5, 0.7);
+            border: 1px solid rgba(139, 0, 0, 0.3);
+            color: var(--color-texto);
+            padding: 6px 12px;
+            font-size: 0.72em;
+            font-family: 'Cinzel Decorative', cursive;
+            cursor: pointer;
+            transition: var(--transicion);
+            opacity: 0.85;
+        }
+        .cine-chip-btn:hover {
+            background: rgba(50, 10, 10, 0.9);
+            border-color: var(--color-primario);
+            opacity: 1;
+            transform: translateY(-1px);
+        }
+        .cine-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(139, 0, 0, 0.25);
+            border-bottom: 2px solid var(--color-primario);
+            color: var(--color-texto);
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 0.82em;
+            outline: none;
+            box-sizing: border-box;
+            transition: var(--transicion);
+            display: block;
+            margin-bottom: 12px;
+        }
+        .cine-input:focus {
+            border-color: var(--color-primario);
+            box-shadow: 0 0 12px rgba(139, 0, 0, 0.2);
+            background: rgba(15, 3, 3, 0.9);
+        }
+        .cine-btn {
+            background: linear-gradient(to bottom, #222, #111);
+            color: var(--color-texto);
+            border: 1px solid var(--color-primario);
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 0.82em;
+            font-family: 'Cinzel Decorative', cursive;
+            cursor: pointer;
+            transition: var(--transicion);
+            box-shadow: var(--sombra);
+        }
+        .cine-btn:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #333, #222);
+            transform: translateY(-2px);
+            box-shadow: var(--sombra-hover);
+        }
+        .cine-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .cine-respuesta-txt {
+            font-family: 'Cinzel', serif;
+            font-size: 0.87em;
+            line-height: 1.9;
+            white-space: pre-wrap;
+            text-align: left;
+        }
+        .cine-cursor::after {
+            content: '▋';
+            animation: cine-blink 0.7s step-end infinite;
+            color: var(--color-primario);
+            font-size: 0.8em;
+        }
+        @keyframes cine-blink { 50% { opacity: 0; } }
+        .cine-etiqueta {
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 0.72em;
+            color: var(--color-primario);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -616,6 +707,7 @@
         <button onclick="mostrarSeccion('gustos')">Razones por las que te amo</button>
         <button onclick="mostrarSeccion('oops')">Oops</button>
         <button onclick="mostrarSeccion('juegos')">Juegos</button>
+        <button onclick="mostrarSeccion('cine')"><i class="fas fa-film"></i> Películas</button>
     </div>
 </div>
 
@@ -1504,6 +1596,101 @@
     <a class="volver" onclick="volverInicio()">Volver</a>
 </div>
 
+<!-- Sección Películas IA -->
+<div class="seccion" id="cine">
+    <h1>Películas</h1>
+    <br>
+
+    <!-- SETUP -->
+    <div id="cine-setup">
+        <p style="font-size:0.9em; opacity:0.65; margin-bottom:20px; line-height:1.7;">
+            Conecta tu Letterboxd y un agente de IA te dará recomendaciones personalizadas basadas en lo que has visto y tu watchlist.
+        </p>
+
+        <div class="tarjeta">
+            <h3><i class="fas fa-film" style="margin-right:8px;"></i>Tu usuario de Letterboxd</h3>
+            <br>
+            <input type="text" id="cine-username" placeholder="ej: maria" class="cine-input" autocomplete="off">
+        </div>
+
+        <div class="tarjeta">
+            <h3><i class="fas fa-key" style="margin-right:8px;"></i>API Key de Claude</h3>
+            <p style="font-size:0.8em; opacity:0.5; margin:6px 0 12px; line-height:1.6;">
+                Se guarda solo en este dispositivo. Va directo a Anthropic, nunca a ningún servidor nuestro.<br>
+                Consíguela gratis en <span style="color:var(--color-primario);">console.anthropic.com</span>
+            </p>
+            <input type="password" id="cine-apikey" placeholder="sk-ant-..." class="cine-input" autocomplete="off">
+        </div>
+
+        <button class="cine-btn" onclick="iniciarCine()">
+            <i class="fas fa-plug"></i> &nbsp;Conectar
+        </button>
+    </div>
+
+    <!-- CARGANDO -->
+    <div id="cine-loading" style="display:none; text-align:center; padding:50px 0;">
+        <i class="fas fa-film" style="color:var(--color-primario); font-size:2em; animation:spin 1s linear infinite;"></i>
+        <p id="cine-loading-msg" style="margin-top:16px; font-family:'Cinzel Decorative',cursive; font-size:0.82em; opacity:0.6;">Cargando tu Letterboxd...</p>
+    </div>
+
+    <!-- CONECTADO -->
+    <div id="cine-main" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding:10px 14px; background:rgba(15,4,4,0.7); border:1px solid rgba(139,0,0,0.2);">
+            <div style="font-family:'Cinzel Decorative',cursive; font-size:0.76em; color:rgba(224,224,224,0.6);">
+                <i class="fas fa-circle" style="color:var(--color-primario); font-size:0.5em; margin-right:6px; vertical-align:middle;"></i>
+                <span id="cine-nombre-usuario"></span>
+            </div>
+            <button onclick="resetCine()" style="background:none; border:none; color:rgba(255,255,255,0.25); cursor:pointer; font-size:0.72em; font-family:'Cinzel Decorative',cursive;">
+                <i class="fas fa-rotate-left"></i> cambiar
+            </button>
+        </div>
+
+        <!-- Películas vistas -->
+        <div id="cine-bloque-vistas" style="margin-bottom:20px;">
+            <div class="cine-etiqueta"><i class="fas fa-eye" style="margin-right:6px;"></i>Vista recientemente</div>
+            <div id="cine-chips-vistas" style="display:flex; flex-wrap:wrap; gap:7px;"></div>
+        </div>
+
+        <!-- Watchlist -->
+        <div id="cine-bloque-watchlist" style="margin-bottom:26px;">
+            <div class="cine-etiqueta"><i class="fas fa-bookmark" style="margin-right:6px;"></i>Tu watchlist</div>
+            <div id="cine-chips-watchlist" style="display:flex; flex-wrap:wrap; gap:7px;"></div>
+        </div>
+
+        <!-- Preguntas sugeridas -->
+        <div style="margin-bottom:14px;">
+            <div style="font-family:'Cinzel Decorative',cursive; font-size:0.7em; color:rgba(224,224,224,0.4); margin-bottom:10px;">Preguntas rápidas:</div>
+            <div id="cine-sugeridas" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+        </div>
+
+        <!-- Input pregunta -->
+        <textarea id="cine-pregunta" rows="3" placeholder="¿Qué te provoca ver hoy?" class="cine-input" style="resize:none; line-height:1.6; margin-top:10px;"></textarea>
+        <button class="cine-btn" id="cine-btn-ask" onclick="preguntarCine()">
+            <i class="fas fa-wand-magic-sparkles"></i> &nbsp;Preguntar
+        </button>
+
+        <!-- Respuesta -->
+        <div id="cine-respuesta-wrap" style="display:none; margin-top:22px;">
+            <div class="tarjeta" style="border-left-color:var(--color-primario); padding:16px 18px;">
+                <div id="cine-respuesta-txt" class="cine-respuesta-txt"></div>
+            </div>
+            <button onclick="limpiarRespuestaCine()" style="background:none; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-family:'Cinzel Decorative',cursive; font-size:0.72em; margin-top:10px;">
+                <i class="fas fa-rotate-left"></i> Otra pregunta
+            </button>
+        </div>
+    </div>
+
+    <!-- ERROR -->
+    <div id="cine-error" style="display:none; text-align:center; padding:30px 0;">
+        <i class="fas fa-exclamation-triangle" style="color:var(--color-primario); font-size:1.5em;"></i>
+        <p id="cine-error-msg" style="margin-top:12px; color:var(--color-primario); font-family:'Cinzel Decorative',cursive; font-size:0.82em; line-height:1.6;"></p>
+        <button class="cine-btn" onclick="resetCine()" style="margin-top:16px;">Reintentar</button>
+    </div>
+
+    <br><br>
+    <a class="volver" onclick="volverInicio()">Volver</a>
+</div>
+
 <script>
 // Constantes y configuración
 const CONTRASENA_CORRECTA = "sisoynovia";
@@ -1718,6 +1905,7 @@ function mostrarSeccion(id) {
     document.querySelectorAll('.seccion').forEach(el => el.style.display = 'none');
     document.getElementById('inicio').style.display = 'none';
     document.getElementById(id).style.display = 'block';
+    if (id === 'cine') onMostrarCine();
 }
 
 function volverInicio() {
@@ -1777,6 +1965,257 @@ document.addEventListener('DOMContentLoaded', function() {
         checkbox.addEventListener('change', guardarEstadoCheckboxes);
     });
 });
+
+// ─── PELÍCULAS / CINE IA ──────────────────────────────────────────────────────
+
+let cinePeliculasVistas = [];
+let cineWatchlist = [];
+let cineApiKey = '';
+let cineUsername = '';
+
+function mostrarEstadoCine(estado, msg) {
+    ['cine-setup', 'cine-loading', 'cine-main', 'cine-error'].forEach(id => {
+        document.getElementById(id).style.display = 'none';
+    });
+    if (estado === 'setup')   document.getElementById('cine-setup').style.display = 'block';
+    if (estado === 'loading') {
+        document.getElementById('cine-loading').style.display = 'block';
+        if (msg) document.getElementById('cine-loading-msg').textContent = msg;
+    }
+    if (estado === 'main')    document.getElementById('cine-main').style.display = 'block';
+    if (estado === 'error')   {
+        document.getElementById('cine-error').style.display = 'block';
+        if (msg) document.getElementById('cine-error-msg').textContent = msg;
+    }
+}
+
+function onMostrarCine() {
+    const savedUser = localStorage.getItem('cine_username');
+    const savedKey  = localStorage.getItem('cine_apikey');
+    if (savedUser && savedKey && cinePeliculasVistas.length === 0 && cineWatchlist.length === 0) {
+        cineApiKey    = savedKey;
+        cineUsername  = savedUser;
+        cargarLetterboxd(savedUser);
+    } else if (savedUser && savedKey && cinePeliculasVistas.length > 0) {
+        mostrarEstadoCine('main');
+    } else {
+        mostrarEstadoCine('setup');
+    }
+}
+
+async function iniciarCine() {
+    const username = document.getElementById('cine-username').value.trim();
+    const apiKey   = document.getElementById('cine-apikey').value.trim();
+    if (!username) { alert('Ingresa tu usuario de Letterboxd'); return; }
+    if (!apiKey)   { alert('Ingresa tu API key de Claude'); return; }
+    localStorage.setItem('cine_username', username);
+    localStorage.setItem('cine_apikey',   apiKey);
+    cineApiKey   = apiKey;
+    cineUsername = username;
+    await cargarLetterboxd(username);
+}
+
+function extraerTituloDiario(t) {
+    t = (t || '').trim();
+    t = t.replace(/^[★☆½\s]+-\s*/, '');   // quitar estrellas y guión
+    t = t.replace(/,\s*\d{4}\s*$/, '');     // quitar ", 2024"
+    return t.trim();
+}
+
+function extraerTituloWatchlist(t) {
+    return (t || '').replace(/\s*\(\d{4}\)\s*$/, '').trim();
+}
+
+async function cargarLetterboxd(username) {
+    mostrarEstadoCine('loading', 'Cargando tu Letterboxd...');
+    const proxy = 'https://api.allorigins.win/get?url=';
+    try {
+        const [diaryRes, watchlistRes] = await Promise.all([
+            fetch(proxy + encodeURIComponent(`https://letterboxd.com/${username}/rss/`))
+                .then(r => r.json()).catch(() => null),
+            fetch(proxy + encodeURIComponent(`https://letterboxd.com/${username}/watchlist/rss/`))
+                .then(r => r.json()).catch(() => null)
+        ]);
+
+        const parser = new DOMParser();
+
+        cinePeliculasVistas = [];
+        if (diaryRes?.contents) {
+            const xml = parser.parseFromString(diaryRes.contents, 'text/xml');
+            cinePeliculasVistas = Array.from(xml.querySelectorAll('item'))
+                .slice(0, 20)
+                .map(item => extraerTituloDiario(item.querySelector('title')?.textContent))
+                .filter(t => t && t !== 'Letterboxd' && t.length > 1);
+        }
+
+        cineWatchlist = [];
+        if (watchlistRes?.contents) {
+            const xml = parser.parseFromString(watchlistRes.contents, 'text/xml');
+            cineWatchlist = Array.from(xml.querySelectorAll('item'))
+                .slice(0, 20)
+                .map(item => extraerTituloWatchlist(item.querySelector('title')?.textContent))
+                .filter(t => t && t !== 'Letterboxd' && t.length > 1);
+        }
+
+        if (cinePeliculasVistas.length === 0 && cineWatchlist.length === 0) {
+            mostrarEstadoCine('error', 'No se encontraron películas. Verifica que tu perfil de Letterboxd sea público.');
+            return;
+        }
+
+        poblarCineMain();
+        mostrarEstadoCine('main');
+    } catch (e) {
+        mostrarEstadoCine('error', 'Error de red: ' + e.message);
+    }
+}
+
+function poblarCineMain() {
+    document.getElementById('cine-nombre-usuario').textContent = cineUsername;
+
+    const chipsVistas = document.getElementById('cine-chips-vistas');
+    chipsVistas.innerHTML = '';
+    if (cinePeliculasVistas.length > 0) {
+        cinePeliculasVistas.slice(0, 12).forEach(t => {
+            const el = document.createElement('span');
+            el.className = 'cine-chip';
+            el.textContent = t;
+            chipsVistas.appendChild(el);
+        });
+        document.getElementById('cine-bloque-vistas').style.display = 'block';
+    } else {
+        document.getElementById('cine-bloque-vistas').style.display = 'none';
+    }
+
+    const chipsWl = document.getElementById('cine-chips-watchlist');
+    chipsWl.innerHTML = '';
+    if (cineWatchlist.length > 0) {
+        cineWatchlist.slice(0, 10).forEach(t => {
+            const el = document.createElement('span');
+            el.className = 'cine-chip';
+            el.textContent = t;
+            chipsWl.appendChild(el);
+        });
+        document.getElementById('cine-bloque-watchlist').style.display = 'block';
+    } else {
+        document.getElementById('cine-bloque-watchlist').style.display = 'none';
+    }
+
+    const sugeridas = document.getElementById('cine-sugeridas');
+    sugeridas.innerHTML = '';
+    [
+        '¿Qué debería ver este fin de semana?',
+        '¿Qué sigue en mi watchlist?',
+        'Recomiéndame algo que me haga llorar',
+        'Algo raro y de culto',
+        '¿Qué directora debo explorar?',
+        'Recomiéndame algo como lo último que vi'
+    ].forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'cine-chip-btn';
+        btn.textContent = p;
+        btn.onclick = () => {
+            document.getElementById('cine-pregunta').value = p;
+            preguntarCine();
+        };
+        sugeridas.appendChild(btn);
+    });
+}
+
+async function preguntarCine() {
+    const pregunta = document.getElementById('cine-pregunta').value.trim();
+    if (!pregunta) return;
+
+    const btn    = document.getElementById('cine-btn-ask');
+    const wrap   = document.getElementById('cine-respuesta-wrap');
+    const textoEl = document.getElementById('cine-respuesta-txt');
+
+    btn.disabled = true;
+    wrap.style.display = 'block';
+    textoEl.textContent = '';
+    textoEl.classList.add('cine-cursor');
+
+    const sistema = 'Eres un asistente de cine entusiasta y cálido para María. Hablas en español. Dás recomendaciones personalizadas y específicas basadas en su historial de Letterboxd. Cuando recomiendas una película, explica en una frase por qué le puede gustar según lo que ya vio. Menciona el género, el director y si sabes en qué plataforma de streaming está disponible. Sé concisa y específica.';
+
+    const contexto = [];
+    if (cinePeliculasVistas.length > 0)
+        contexto.push(`Películas vistas recientemente por María:\n${cinePeliculasVistas.slice(0,15).map(t => `- ${t}`).join('\n')}`);
+    if (cineWatchlist.length > 0)
+        contexto.push(`Watchlist de María (quiere ver):\n${cineWatchlist.slice(0,15).map(t => `- ${t}`).join('\n')}`);
+
+    const mensajeCompleto = (contexto.length ? contexto.join('\n\n') + '\n\n' : '') + `Pregunta: ${pregunta}`;
+
+    try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': cineApiKey,
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 800,
+                stream: true,
+                system: sistema,
+                messages: [{ role: 'user', content: mensajeCompleto }]
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Error ${response.status} — verifica tu API key`);
+        }
+
+        const reader  = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') continue;
+                try {
+                    const ev = JSON.parse(data);
+                    if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+                        textoEl.textContent += ev.delta.text;
+                    }
+                } catch {}
+            }
+        }
+    } catch (e) {
+        textoEl.textContent = '⚠ ' + e.message;
+    }
+
+    textoEl.classList.remove('cine-cursor');
+    btn.disabled = false;
+}
+
+function limpiarRespuestaCine() {
+    document.getElementById('cine-respuesta-wrap').style.display = 'none';
+    document.getElementById('cine-pregunta').value = '';
+    document.getElementById('cine-respuesta-txt').textContent = '';
+}
+
+function resetCine() {
+    localStorage.removeItem('cine_username');
+    localStorage.removeItem('cine_apikey');
+    cineApiKey = '';
+    cineUsername = '';
+    cinePeliculasVistas = [];
+    cineWatchlist = [];
+    document.getElementById('cine-username').value = '';
+    document.getElementById('cine-apikey').value = '';
+    mostrarEstadoCine('setup');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
