@@ -1608,12 +1608,12 @@
         </p>
 
         <div class="tarjeta">
-            <h3><i class="fas fa-key" style="margin-right:8px;"></i>API Key de Claude</h3>
+            <h3><i class="fas fa-key" style="margin-right:8px;"></i>API Key de ChatGPT</h3>
             <p style="font-size:0.8em; opacity:0.5; margin:6px 0 12px; line-height:1.6;">
-                Se guarda solo en este dispositivo. Va directo a Anthropic, nunca a ningún servidor nuestro.<br>
-                Consíguela gratis en <span style="color:var(--color-primario);">console.anthropic.com</span>
+                Se guarda solo en este dispositivo. Va directo a OpenAI, nunca a ningún servidor nuestro.<br>
+                Consíguela en <span style="color:var(--color-primario);">platform.openai.com/api-keys</span>
             </p>
-            <input type="password" id="cine-apikey" placeholder="sk-ant-..." class="cine-input" autocomplete="off">
+            <input type="password" id="cine-apikey" placeholder="sk-..." class="cine-input" autocomplete="off">
         </div>
 
         <button class="cine-btn" onclick="iniciarCine()">
@@ -2135,20 +2135,20 @@ async function preguntarCine() {
     const mensajeCompleto = (contexto.length ? contexto.join('\n\n') + '\n\n' : '') + `Pregunta: ${pregunta}`;
 
     try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': cineApiKey,
-                'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-direct-browser-access': 'true'
+                'Authorization': 'Bearer ' + cineApiKey
             },
             body: JSON.stringify({
-                model: 'claude-haiku-4-5-20251001',
+                model: 'gpt-4o-mini',
                 max_tokens: 800,
                 stream: true,
-                system: sistema,
-                messages: [{ role: 'user', content: mensajeCompleto }]
+                messages: [
+                    { role: 'system', content: sistema },
+                    { role: 'user',   content: mensajeCompleto }
+                ]
             })
         });
 
@@ -2173,9 +2173,8 @@ async function preguntarCine() {
                 if (data === '[DONE]') continue;
                 try {
                     const ev = JSON.parse(data);
-                    if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-                        textoEl.textContent += ev.delta.text;
-                    }
+                    const token = ev.choices?.[0]?.delta?.content;
+                    if (token) textoEl.textContent += token;
                 } catch {}
             }
         }
