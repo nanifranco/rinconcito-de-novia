@@ -1,0 +1,24 @@
+{
+  "name": "Rinconcito de Novia",
+  "short_name": "Rinconcito",
+  "description": "Un rinconcito especial para mi novia",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121212",
+  "theme_color": "#8b0000",
+  "icons": [
+    {
+      "src": "images/logo.png",
+      "sizes": "150x150",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "images/logo-small.png",
+      "sizes": "30x30",
+      "type": "image/png"
+    }
+  ]
+}

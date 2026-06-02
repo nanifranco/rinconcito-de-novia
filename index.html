@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rinconcito de Novia</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8b0000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Rinconcito">
+    <link rel="apple-touch-icon" href="images/logo.png">
+
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Creepster&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1762,18 +1771,18 @@ function cargarEstadoCheckboxes() {
     });
 }
 
-// Agrega esto al final del event listener DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
-    // ... tu código existente ...
-    
-    // Cargar estado de checkboxes al iniciar
     cargarEstadoCheckboxes();
-    
-    // Eventos para los checkboxes
     document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', guardarEstadoCheckboxes);
     });
 });
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+    });
+}
 </script>
 
 </body>
