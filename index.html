@@ -1604,14 +1604,8 @@
     <!-- SETUP -->
     <div id="cine-setup">
         <p style="font-size:0.9em; opacity:0.65; margin-bottom:20px; line-height:1.7;">
-            Conecta tu Letterboxd y un agente de IA te dará recomendaciones personalizadas basadas en lo que has visto y tu watchlist.
+            Un agente de IA te dará recomendaciones basadas en tu Letterboxd. Solo necesitas tu API key de Claude una sola vez.
         </p>
-
-        <div class="tarjeta">
-            <h3><i class="fas fa-film" style="margin-right:8px;"></i>Tu usuario de Letterboxd</h3>
-            <br>
-            <input type="text" id="cine-username" placeholder="ej: maria" class="cine-input" autocomplete="off">
-        </div>
 
         <div class="tarjeta">
             <h3><i class="fas fa-key" style="margin-right:8px;"></i>API Key de Claude</h3>
@@ -1968,10 +1962,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ─── PELÍCULAS / CINE IA ──────────────────────────────────────────────────────
 
+const CINE_USERNAME = 'mariagarza';
+
 let cinePeliculasVistas = [];
 let cineWatchlist = [];
 let cineApiKey = '';
-let cineUsername = '';
+let cineUsername = CINE_USERNAME;
 
 function mostrarEstadoCine(estado, msg) {
     ['cine-setup', 'cine-loading', 'cine-main', 'cine-error'].forEach(id => {
@@ -1990,13 +1986,11 @@ function mostrarEstadoCine(estado, msg) {
 }
 
 function onMostrarCine() {
-    const savedUser = localStorage.getItem('cine_username');
-    const savedKey  = localStorage.getItem('cine_apikey');
-    if (savedUser && savedKey && cinePeliculasVistas.length === 0 && cineWatchlist.length === 0) {
-        cineApiKey    = savedKey;
-        cineUsername  = savedUser;
-        cargarLetterboxd(savedUser);
-    } else if (savedUser && savedKey && cinePeliculasVistas.length > 0) {
+    const savedKey = localStorage.getItem('cine_apikey');
+    if (savedKey && cinePeliculasVistas.length === 0 && cineWatchlist.length === 0) {
+        cineApiKey = savedKey;
+        cargarLetterboxd(CINE_USERNAME);
+    } else if (savedKey && cinePeliculasVistas.length > 0) {
         mostrarEstadoCine('main');
     } else {
         mostrarEstadoCine('setup');
@@ -2004,15 +1998,11 @@ function onMostrarCine() {
 }
 
 async function iniciarCine() {
-    const username = document.getElementById('cine-username').value.trim();
-    const apiKey   = document.getElementById('cine-apikey').value.trim();
-    if (!username) { alert('Ingresa tu usuario de Letterboxd'); return; }
-    if (!apiKey)   { alert('Ingresa tu API key de Claude'); return; }
-    localStorage.setItem('cine_username', username);
-    localStorage.setItem('cine_apikey',   apiKey);
-    cineApiKey   = apiKey;
-    cineUsername = username;
-    await cargarLetterboxd(username);
+    const apiKey = document.getElementById('cine-apikey').value.trim();
+    if (!apiKey) { alert('Ingresa tu API key de Claude'); return; }
+    localStorage.setItem('cine_apikey', apiKey);
+    cineApiKey = apiKey;
+    await cargarLetterboxd(CINE_USERNAME);
 }
 
 function extraerTituloDiario(t) {
@@ -2204,13 +2194,11 @@ function limpiarRespuestaCine() {
 }
 
 function resetCine() {
-    localStorage.removeItem('cine_username');
     localStorage.removeItem('cine_apikey');
     cineApiKey = '';
-    cineUsername = '';
+    cineUsername = CINE_USERNAME;
     cinePeliculasVistas = [];
     cineWatchlist = [];
-    document.getElementById('cine-username').value = '';
     document.getElementById('cine-apikey').value = '';
     mostrarEstadoCine('setup');
 }
