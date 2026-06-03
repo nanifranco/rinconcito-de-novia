@@ -2088,25 +2088,48 @@ async function adjuntarArchivoCirce(input) {
             circeArchivosAdjuntos.push({ type: 'image', ...comp, nombre });
         } else if (file.type.startsWith('video/')) {
             circeArchivosAdjuntos.push({ type: 'video', previewUrl: URL.createObjectURL(file), nombre });
-        } else if (file.type.includes('pdf') || file.name.match(/\.(pdf|doc|docx|txt)$/i)) {
-            if (file.size > 4 * 1024 * 1024) { alert('El archivo "' + nombre + '" es muy grande (máx 4MB)'); continue; }
+        } else if (file.type.includes('pdf') || file.name.match(/\.(pdf|txt)$/i)) {
+            if (file.size > 30 * 1024 * 1024) { alert('"' + nombre + '" es muy grande (máx 30MB)'); continue; }
+            const idx = circeArchivosAdjuntos.length;
+            circeArchivosAdjuntos.push({ type: 'document', fileId: null, nombre, subiendo: true });
+            renderAdjuntosPreview();
             try {
-                const base64 = await new Promise((res, rej) => {
-                    const reader = new FileReader();
-                    reader.onload = e => res(e.target.result.split(',')[1]);
-                    reader.onerror = rej;
-                    reader.readAsDataURL(file);
-                });
-                const mediaType = file.type.includes('pdf') ? 'application/pdf' : (file.type || 'application/pdf');
-                circeArchivosAdjuntos.push({ type: 'document', base64, mediaType, nombre });
+                const fileId = await subirArchivoAnthropic(file);
+                circeArchivosAdjuntos[idx] = { type: 'document', fileId, nombre };
             } catch(e) {
-                alert('No se pudo leer: ' + nombre);
+                circeArchivosAdjuntos.splice(idx, 1);
+                alert('No se pudo subir "' + nombre + '": ' + e.message);
             }
+            renderAdjuntosPreview();
         } else {
-            alert('Formato no compatible: ' + nombre);
+            alert('Formato no compatible: ' + nombre + '\nUsa PDF, TXT o imágenes.');
         }
     }
     renderAdjuntosPreview();
+}
+
+async function subirArchivoAnthropic(file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://api.anthropic.com/v1/files');
+        xhr.setRequestHeader('x-api-key', circeApiKey);
+        xhr.setRequestHeader('anthropic-version', '2023-06-01');
+        xhr.setRequestHeader('anthropic-beta', 'files-api-2025-04-14');
+        xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
+        xhr.timeout = 120000;
+        xhr.onload = () => {
+            try {
+                const res = JSON.parse(xhr.responseText);
+                if (xhr.status >= 200 && xhr.status < 300) resolve(res.id);
+                else reject(new Error(res.error?.message || `Error ${xhr.status}`));
+            } catch { reject(new Error('Respuesta inválida')); }
+        };
+        xhr.onerror = () => reject(new Error('Sin conexión'));
+        xhr.ontimeout = () => reject(new Error('Tiempo agotado'));
+        xhr.send(fd);
+    });
 }
 
 function renderAdjuntosPreview() {
@@ -2119,7 +2142,8 @@ function renderAdjuntosPreview() {
         const chip = document.createElement('div');
         chip.className = 'adjunto-chip';
         const icon = adj.type === 'image' ? `<img src="${adj.previewUrl}">` : `<i class="fas fa-${adj.type === 'video' ? 'video' : 'file-lines'}"></i>`;
-        chip.innerHTML = `${icon}<span>${adj.nombre}</span><button onclick="quitarAdjunto(${i})">&times;</button>`;
+        const estado = adj.subiendo ? ' <i class="fas fa-spinner fa-spin" style="font-size:0.8em;opacity:0.5;"></i>' : '';
+        chip.innerHTML = `${icon}<span>${adj.nombre}${estado}</span>${adj.subiendo ? '' : `<button onclick="quitarAdjunto(${i})">&times;</button>`}`;
         chips.appendChild(chip);
     });
 }
@@ -2274,6 +2298,7 @@ async function preguntarCirce() {
     const texto = ta.value.trim();
     const adjuntos = [...circeArchivosAdjuntos];
     if (!texto && !adjuntos.length) return;
+    if (adjuntos.some(a => a.subiendo)) { alert('Espera a que terminen de subir los archivos'); return; }
 
     const btn = document.getElementById('circe-btn-ask');
     btn.disabled = true;
@@ -2304,6 +2329,8 @@ async function preguntarCirce() {
                 if (esActual) {
                     if (a.type === 'image' && a.base64)
                         blocks.push({ type: 'image', source: { type: 'base64', media_type: a.mediaType, data: a.base64 } });
+                    else if (a.type === 'document' && a.fileId)
+                        blocks.push({ type: 'document', source: { type: 'file', file_id: a.fileId } });
                     else if (a.type === 'document' && a.base64)
                         blocks.push({ type: 'document', source: { type: 'base64', media_type: a.mediaType || 'application/pdf', data: a.base64 } });
                     else if (a.type === 'video')
@@ -2347,6 +2374,7 @@ async function preguntarCirce() {
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.setRequestHeader('x-api-key', circeApiKey);
             xhr.setRequestHeader('anthropic-version', '2023-06-01');
+            xhr.setRequestHeader('anthropic-beta', 'files-api-2025-04-14');
             xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
             xhr.onload = () => {
                 try {
