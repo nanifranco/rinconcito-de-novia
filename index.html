@@ -1673,7 +1673,7 @@
     <!-- SETUP -->
     <div id="circe-setup">
         <p style="font-size:0.82em; opacity:0.55; margin-bottom:20px; line-height:1.7; font-family:'Cinzel Decorative',cursive;">
-            Puter!
+            Tu puter!
         </p>
         <div class="tarjeta">
             <h3><i class="fas fa-key" style="margin-right:8px;"></i>API</h3>
@@ -1775,29 +1775,19 @@ let temporizadorBloqueo;
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-    // Configurar eventos
-    document.getElementById('togglePassword').addEventListener('click', togglePasswordVisibility);
-    document.getElementById('contrasena').addEventListener('keypress', handleEnterKey);
-    document.getElementById('btn-entrar').addEventListener('click', verificarContrasena);
+    // Sin contraseña — abrir directo
+    accesoPermitido();
 
-    // Verificar estado de bloqueo
-    if (bloqueado && tiempoBloqueoRestante > 0) {
-        iniciarBloqueo();
-    } else {
-        actualizarContadorIntentos();
-    }
-
-    // Verificar si venimos de la sección de juegos
     const vieneDeJuegos = sessionStorage.getItem('volverAJuegos') === 'true';
     const hashJuegos = window.location.hash === '#juegos';
-    
     if (vieneDeJuegos || hashJuegos) {
         sessionStorage.removeItem('volverAJuegos');
-        accesoPermitido();
         mostrarSeccion('juegos');
     }
 
-    // Iniciar temporizador
+    // Guardar historial de Circe al cerrar la página
+    window.addEventListener('beforeunload', guardarConversacionActual);
+
     setInterval(actualizarTemporizador, 1000);
 });
 
@@ -1841,12 +1831,8 @@ function accesoPermitido() {
 }
 
 function volverAPantallaContrasena() {
-    document.getElementById('inicio').style.display = 'none';
-    document.getElementById('titulo-esquina').style.display = 'none';
     document.querySelectorAll('.seccion').forEach(sec => sec.style.display = 'none');
-    
-    document.getElementById('pantalla-contrasena').style.display = 'flex';
-    document.getElementById('contrasena').focus();
+    document.getElementById('inicio').style.display = 'block';
 }
 
 function intentoFallido() {
