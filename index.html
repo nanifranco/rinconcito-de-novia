@@ -2091,69 +2091,23 @@ async function adjuntarArchivoCirce(input) {
         } else if (file.type.startsWith('video/')) {
             circeArchivosAdjuntos.push({ type: 'video', previewUrl: URL.createObjectURL(file), nombre });
         } else if (file.type.includes('pdf') || file.name.match(/\.(pdf|txt)$/i)) {
-            const idx = circeArchivosAdjuntos.length;
-            circeArchivosAdjuntos.push({ type: 'document', fileId: null, nombre, subiendo: true, progreso: 0 });
-            renderAdjuntosPreview();
             try {
-                const fileId = await subirArchivoAnthropic(file, idx);
-                circeArchivosAdjuntos[idx] = { type: 'document', fileId, nombre };
-            } catch(e) {
-                if (e.message === 'CORS_ERROR') {
-                    // Files API no soporta CORS desde browser — usar base64 como fallback
-                    try {
-                        circeArchivosAdjuntos[idx].progreso = undefined;
-                        const base64 = await new Promise((res, rej) => {
-                            const r = new FileReader();
-                            r.onload = ev => res(ev.target.result.split(',')[1]);
-                            r.onerror = rej;
-                            r.readAsDataURL(file);
-                        });
-                        circeArchivosAdjuntos[idx] = { type: 'document', base64, mediaType: file.type.includes('pdf') ? 'application/pdf' : 'text/plain', nombre };
-                    } catch {
-                        circeArchivosAdjuntos.splice(idx, 1);
-                        alert('No se pudo cargar "' + nombre + '"');
-                    }
-                } else {
-                    circeArchivosAdjuntos.splice(idx, 1);
-                    alert(e.message);
-                }
+                const base64 = await new Promise((res, rej) => {
+                    const r = new FileReader();
+                    r.onload = ev => res(ev.target.result.split(',')[1]);
+                    r.onerror = rej;
+                    r.readAsDataURL(file);
+                });
+                const mediaType = file.type.includes('pdf') ? 'application/pdf' : 'text/plain';
+                circeArchivosAdjuntos.push({ type: 'document', base64, mediaType, nombre });
+            } catch {
+                alert('No se pudo leer "' + nombre + '"');
             }
-            renderAdjuntosPreview();
         } else {
             alert('Formato no compatible: ' + nombre + '\nUsa PDF, TXT o imágenes.');
         }
     }
     renderAdjuntosPreview();
-}
-
-async function subirArchivoAnthropic(file, idx) {
-    const fd = new FormData();
-    fd.append('file', file);
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'https://api.anthropic.com/v1/files');
-        xhr.setRequestHeader('x-api-key', circeApiKey);
-        xhr.setRequestHeader('anthropic-version', '2023-06-01');
-        xhr.setRequestHeader('anthropic-beta', 'files-api-2025-04-14');
-        xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
-        xhr.timeout = 600000; // 10 min para archivos grandes
-        xhr.upload.onprogress = e => {
-            if (e.lengthComputable && idx !== undefined) {
-                circeArchivosAdjuntos[idx].progreso = Math.round(e.loaded / e.total * 100);
-                renderAdjuntosPreview();
-            }
-        };
-        xhr.onload = () => {
-            try {
-                const res = JSON.parse(xhr.responseText);
-                if (xhr.status >= 200 && xhr.status < 300) resolve(res.id);
-                else reject(new Error(res.error?.message || `Error ${xhr.status}`));
-            } catch { reject(new Error('Respuesta inválida')); }
-        };
-        xhr.onerror = () => reject(new Error('CORS_ERROR'));
-        xhr.ontimeout = () => reject(new Error('El archivo tardó demasiado. Intenta con uno más pequeño.'));
-        xhr.send(fd);
-    });
 }
 
 function renderAdjuntosPreview() {
