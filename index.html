@@ -2089,7 +2089,6 @@ async function adjuntarArchivoCirce(input) {
         } else if (file.type.startsWith('video/')) {
             circeArchivosAdjuntos.push({ type: 'video', previewUrl: URL.createObjectURL(file), nombre });
         } else if (file.type.includes('pdf') || file.name.match(/\.(pdf|txt)$/i)) {
-            if (file.size > 30 * 1024 * 1024) { alert('"' + nombre + '" es muy grande (máx 30MB)'); continue; }
             const idx = circeArchivosAdjuntos.length;
             circeArchivosAdjuntos.push({ type: 'document', fileId: null, nombre, subiendo: true });
             renderAdjuntosPreview();
