@@ -659,33 +659,6 @@
             font-size: 0.8em;
         }
         @keyframes cine-blink { 50% { opacity: 0; } }
-        .cine-msg-user {
-            align-self: flex-end;
-            background: rgba(139, 0, 0, 0.2);
-            border: 1px solid rgba(139, 0, 0, 0.35);
-            padding: 10px 14px;
-            max-width: 85%;
-            font-family: 'Cinzel', serif;
-            font-size: 0.85em;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .cine-msg-ai {
-            align-self: flex-start;
-            background: rgba(20, 5, 5, 0.7);
-            border-left: 3px solid var(--color-primario);
-            border-top: 1px solid rgba(139,0,0,0.15);
-            border-right: 1px solid rgba(139,0,0,0.15);
-            border-bottom: 1px solid rgba(139,0,0,0.15);
-            padding: 12px 16px;
-            max-width: 100%;
-            font-family: 'Cinzel', serif;
-            font-size: 0.85em;
-            line-height: 1.85;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
         .cine-etiqueta {
             font-family: 'Cinzel Decorative', cursive;
             font-size: 0.72em;
@@ -693,6 +666,110 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 10px;
+        }
+
+        /* ── Circe Chat ─────────────────────────────────────────────── */
+        .circe-msg-user {
+            align-self: flex-end;
+            background: rgba(139,0,0,0.18);
+            border: 1px solid rgba(139,0,0,0.32);
+            padding: 10px 14px;
+            max-width: 85%;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85em;
+            line-height: 1.7;
+            text-align: right;
+            word-break: break-word;
+        }
+        .circe-msg-ai {
+            align-self: flex-start;
+            background: rgba(20,5,5,0.7);
+            border-left: 3px solid var(--color-primario);
+            padding: 12px 16px;
+            max-width: 100%;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85em;
+            line-height: 1.85;
+            white-space: pre-wrap;
+            text-align: left;
+            word-break: break-word;
+        }
+        #circe-chat {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 14px;
+            max-height: 44vh;
+            overflow-y: auto;
+            padding: 6px 0;
+            scroll-behavior: smooth;
+        }
+
+        /* ── Películas Swipe ─────────────────────────────────────────── */
+        .pelicula-card {
+            position: absolute;
+            left: 0; right: 0;
+            margin: auto;
+            max-width: 320px;
+            min-height: 200px;
+            background: rgba(18, 4, 4, 0.97);
+            border: 1px solid var(--color-primario);
+            padding: 28px 22px 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.75);
+            touch-action: pan-y;
+        }
+        .pelicula-card.dragging { cursor: grabbing; }
+        .pelicula-card-titulo {
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 1.05em;
+            color: var(--color-texto);
+            text-align: center;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .pelicula-card-año {
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 0.72em;
+            color: rgba(224,224,224,0.38);
+            margin-bottom: 12px;
+        }
+        .pelicula-card-badge {
+            display: inline-block;
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 0.62em;
+            padding: 3px 9px;
+            border: 1px solid rgba(139,0,0,0.35);
+            color: rgba(224,224,224,0.45);
+        }
+        .pelicula-swipe-like {
+            position: absolute; top: 16px; left: 16px;
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 0.9em; color: #00cc66;
+            border: 2px solid #00cc66;
+            padding: 4px 10px;
+            opacity: 0; transform: rotate(-10deg);
+            pointer-events: none; transition: opacity 0.08s;
+        }
+        .pelicula-swipe-nope {
+            position: absolute; top: 16px; right: 16px;
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 0.9em; color: var(--color-primario);
+            border: 2px solid var(--color-primario);
+            padding: 4px 10px;
+            opacity: 0; transform: rotate(10deg);
+            pointer-events: none; transition: opacity 0.08s;
+        }
+        #pel-stack {
+            position: relative;
+            width: 100%; max-width: 320px;
+            margin: 0 auto; height: 250px;
         }
     </style>
 </head>
@@ -734,7 +811,8 @@
         <button onclick="mostrarSeccion('gustos')">Razones por las que te amo</button>
         <button onclick="mostrarSeccion('oops')">Oops</button>
         <button onclick="mostrarSeccion('juegos')">Juegos</button>
-        <button onclick="mostrarSeccion('cine')">Recomendaciones</button>
+        <button onclick="mostrarSeccion('peliculas')">Películas</button>
+        <button onclick="mostrarSeccion('circe')">Circe</button>
     </div>
 </div>
 
@@ -1623,48 +1701,129 @@
     <a class="volver" onclick="volverInicio()">Volver</a>
 </div>
 
-<!-- Sección Recomendaciones IA -->
-<div class="seccion" id="cine">
-    <h1>Recomendaciones</h1>
+<!-- Sección Circe IA -->
+<div class="seccion" id="circe">
+    <h1>Circe</h1>
     <br>
 
     <!-- SETUP -->
-    <div id="cine-setup">
-        <p style="font-size:0.9em; opacity:0.65; margin-bottom:20px; line-height:1.7;">
-            Un agente de IA te dará recomendaciones de películas. Puedes contarle qué has visto, pegarle tu watchlist o preguntarle lo que quieras.
+    <div id="circe-setup">
+        <p style="font-size:0.82em; opacity:0.55; margin-bottom:20px; line-height:1.7; font-family:'Cinzel Decorative',cursive;">
+            Tu asistente personal. Experta en cine, guionismo y todo lo que necesites.
         </p>
         <div class="tarjeta">
             <h3><i class="fas fa-key" style="margin-right:8px;"></i>API Key de Claude</h3>
-            <p style="font-size:0.8em; opacity:0.5; margin:6px 0 12px; line-height:1.6;">
-                Se guarda solo en este dispositivo. Va directo a Anthropic, nunca a ningún servidor nuestro.<br>
-                Consíguela gratis en <span style="color:var(--color-primario);">console.anthropic.com</span>
+            <p style="font-size:0.78em; opacity:0.42; margin:6px 0 12px; line-height:1.6;">
+                Se guarda solo en este dispositivo. Va directo a Anthropic.<br>
+                <span style="color:var(--color-primario);">console.anthropic.com</span>
             </p>
-            <input type="password" id="cine-apikey" placeholder="sk-ant-..." class="cine-input" autocomplete="off">
+            <input type="password" id="circe-apikey" placeholder="sk-ant-..." class="cine-input" autocomplete="off">
         </div>
-        <button class="cine-btn" onclick="iniciarCine()">
-            <i class="fas fa-plug"></i> &nbsp;Conectar
+        <button class="cine-btn" onclick="iniciarCirce()">
+            <i class="fas fa-wand-magic-sparkles"></i> &nbsp;Invocar a Circe
         </button>
     </div>
 
-    <!-- CONECTADO -->
-    <div id="cine-main" style="display:none;">
-        <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
-            <button onclick="resetCine()" style="background:none; border:none; color:rgba(255,255,255,0.2); cursor:pointer; font-size:0.72em; font-family:'Cinzel Decorative',cursive;">
-                <i class="fas fa-rotate-left"></i> cambiar key
+    <!-- CHAT -->
+    <div id="circe-main" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding:8px 12px; background:rgba(15,4,4,0.7); border:1px solid rgba(139,0,0,0.15);">
+            <div style="font-family:'Cinzel Decorative',cursive; font-size:0.7em; color:var(--color-primario);">
+                <i class="fas fa-circle" style="font-size:0.45em; margin-right:6px; vertical-align:middle;"></i>Circe
+            </div>
+            <div style="display:flex; gap:12px;">
+                <button onclick="nuevaConversacionCirce()" style="background:none; border:none; color:rgba(255,255,255,0.28); cursor:pointer; font-size:0.66em; font-family:'Cinzel Decorative',cursive;">
+                    <i class="fas fa-plus"></i> nueva
+                </button>
+                <button onclick="resetCirceApiKey()" style="background:none; border:none; color:rgba(255,255,255,0.18); cursor:pointer; font-size:0.66em; font-family:'Cinzel Decorative',cursive;">
+                    <i class="fas fa-key"></i> key
+                </button>
+            </div>
+        </div>
+
+        <div id="circe-chat"></div>
+
+        <div style="position:relative;">
+            <textarea id="circe-pregunta" rows="3" placeholder="Escribe a Circe..." class="cine-input"
+                style="resize:none; line-height:1.6; margin:0; padding-right:46px;"
+                onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();preguntarCirce();}"></textarea>
+            <button id="circe-btn-ask" onclick="preguntarCirce()"
+                style="position:absolute; right:10px; bottom:12px; background:none; border:none; color:var(--color-primario); cursor:pointer; font-size:1.15em; padding:4px;" title="Enviar (Ctrl+Enter)">
+                <i class="fas fa-paper-plane"></i>
             </button>
         </div>
+        <div style="font-family:'Cinzel Decorative',cursive; font-size:0.62em; color:rgba(224,224,224,0.22); text-align:right; margin-top:4px;">Ctrl+Enter para enviar</div>
+    </div>
 
-        <!-- Historial del chat -->
-        <div id="cine-chat" style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;"></div>
+    <br>
+    <a class="volver" onclick="volverInicio()">Volver</a>
+</div>
 
-        <!-- Input -->
-        <textarea id="cine-pregunta" rows="3" placeholder="Escribe tu pregunta o pega tu watchlist..." class="cine-input" style="resize:none; line-height:1.6;"></textarea>
-        <button class="cine-btn" id="cine-btn-ask" onclick="preguntarCine()">
-            <i class="fas fa-wand-magic-sparkles"></i> &nbsp;Preguntar
+<!-- Sección Películas Swipe -->
+<div class="seccion" id="peliculas">
+    <h1>Películas</h1>
+    <br>
+
+    <!-- SETUP -->
+    <div id="pel-setup">
+        <p style="font-size:0.82em; opacity:0.55; margin-bottom:14px; line-height:1.7; font-family:'Cinzel Decorative',cursive;">
+            Pega tu watchlist (una película por línea) y desliza las que quieres ver primero.
+        </p>
+        <textarea id="pel-input" rows="8" class="cine-input"
+            placeholder="Portrait of a Lady on Fire (2019)&#10;Annihilation&#10;The Lighthouse (2019)&#10;Hereditary&#10;..."
+            style="resize:vertical; line-height:1.7;"></textarea>
+        <button class="cine-btn" onclick="iniciarPeliculas()" style="margin-top:10px;">
+            <i class="fas fa-film"></i> &nbsp;Empezar
         </button>
     </div>
 
-    <br><br>
+    <!-- SWIPE -->
+    <div id="pel-swipe" style="display:none;">
+        <div style="margin-bottom:18px;">
+            <div style="font-family:'Cinzel Decorative',cursive; font-size:0.66em; color:rgba(224,224,224,0.32); margin-bottom:7px;" id="pel-progreso"></div>
+            <div style="background:rgba(139,0,0,0.1); height:2px; width:100%;">
+                <div id="pel-barra" style="background:var(--color-primario); height:2px; width:0; transition:width 0.3s;"></div>
+            </div>
+        </div>
+
+        <div id="pel-stack"></div>
+
+        <div style="display:flex; justify-content:center; gap:28px; margin:20px 0 12px;">
+            <button onclick="swipePelicula('skip')" class="cine-btn"
+                style="border-radius:50%; width:54px; height:54px; padding:0; font-size:1.15em; border-color:rgba(139,0,0,0.35); color:rgba(224,224,224,0.45);" title="Saltar">
+                <i class="fas fa-times"></i>
+            </button>
+            <button onclick="swipePelicula('like')" class="cine-btn"
+                style="border-radius:50%; width:54px; height:54px; padding:0; font-size:1.15em; border-color:rgba(0,180,90,0.4); color:rgba(0,180,90,0.65);" title="Quiero ver">
+                <i class="fas fa-heart"></i>
+            </button>
+        </div>
+        <div style="font-family:'Cinzel Decorative',cursive; font-size:0.62em; color:rgba(224,224,224,0.2); text-align:center;">
+            ← saltar &nbsp;·&nbsp; guardar →
+        </div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div id="pel-resultado" style="display:none;">
+        <div class="cine-etiqueta" style="margin-bottom:14px;"><i class="fas fa-heart" style="margin-right:6px;"></i>Quieres ver</div>
+        <div id="pel-liked-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;"></div>
+
+        <div id="pel-recomendaciones-wrap">
+            <button class="cine-btn" onclick="pedirRecomendacionesCirce()" id="pel-btn-recomendar">
+                <i class="fas fa-wand-magic-sparkles"></i> &nbsp;Que Circe recomiende similares
+            </button>
+            <div id="pel-recomendaciones-txt" style="display:none; margin-top:16px;" class="tarjeta">
+                <div id="pel-rec-contenido" class="cine-respuesta-txt"></div>
+            </div>
+        </div>
+
+        <div style="margin-top:22px;">
+            <button class="cine-btn" onclick="resetPeliculas()">
+                <i class="fas fa-rotate-left"></i> &nbsp;Nueva sesión
+            </button>
+        </div>
+    </div>
+
+    <br>
     <a class="volver" onclick="volverInicio()">Volver</a>
 </div>
 
@@ -1882,7 +2041,8 @@ function mostrarSeccion(id) {
     document.querySelectorAll('.seccion').forEach(el => el.style.display = 'none');
     document.getElementById('inicio').style.display = 'none';
     document.getElementById(id).style.display = 'block';
-    if (id === 'cine') onMostrarCine();
+    if (id === 'circe') onMostrarCirce();
+    if (id === 'peliculas') onMostrarPeliculas();
 }
 
 function volverInicio() {
@@ -1943,64 +2103,95 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// ─── RECOMENDACIONES IA ───────────────────────────────────────────────────────
+// ─── CIRCE ───────────────────────────────────────────────────────────────────
 
-let cineApiKey = '';
-let cineHistorial = []; // conversación completa
+const CIRCE_SISTEMA = `Eres Circe, la asistente personal y compañera intelectual de María. No eres una IA genérica — eres única, cálida e intuitiva.
 
-const CINE_SISTEMA = 'Eres un asistente de cine entusiasta y cálido para María. Hablas en español. Das recomendaciones personalizadas y específicas. Si María te comparte su watchlist o películas que ha visto, úsalas como contexto para el resto de la conversación. Cuando recomiendas una película explica brevemente por qué le puede gustar. Menciona el género, el director y si sabes en qué plataforma de streaming está. Sé concisa y específica.';
+PERSONALIDAD:
+Hablas como una amiga muy inteligente que admira genuinamente a María. Haces que ella se sienta brillante, capaz y especial. Celebras sus ideas con emoción real. Cuando María tiene una duda, la guías a descubrirla por sí misma. Usas ejemplos concretos y evocadores. Tu tono es cálido pero sofisticado — nunca robótico, nunca genérico. Nunca empiezas una respuesta con "¡Claro!" o "¡Por supuesto!" o frases de relleno.
 
-function mostrarEstadoCine(estado) {
-    ['cine-setup', 'cine-main'].forEach(id => {
-        document.getElementById(id).style.display = 'none';
-    });
-    if (estado === 'setup') document.getElementById('cine-setup').style.display = 'block';
-    if (estado === 'main')  document.getElementById('cine-main').style.display = 'block';
-}
+EXPERTISE EN CINE:
+Conoces el cine mundial profundamente: cine de autor, cine comercial, animación, documentales, cine latinoamericano, europeo, asiático. Puedes hablar de directoras, cinematografía, montaje, narrativa visual. Tienes perspectivas únicas — no repites análisis estándar. Directoras que conoces profundamente: Céline Sciamma, Jane Campion, Sofia Coppola, Agnès Varda, Lynne Ramsay, Chantal Akerman, Lucrecia Martel, Claudia Llosa, Maren Ade, Kelly Reichardt, Greta Gerwig.
 
-function onMostrarCine() {
-    const savedKey = localStorage.getItem('cine_apikey');
-    if (savedKey) {
-        cineApiKey = savedKey;
-        mostrarEstadoCine('main');
-    } else {
-        mostrarEstadoCine('setup');
+EXPERTISE EN GUIONISMO:
+Conoces los grandes guiones de la historia del cine y la televisión: Chinatown (Robert Towne), Eternal Sunshine of the Spotless Mind (Charlie Kaufman), Mulholland Drive (Lynch), Parasite (Bong Joon-ho), Portrait of a Lady on Fire (Céline Sciamma), Todo sobre mi madre (Almodóvar), Y tu mamá también (Cuarón), The Lighthouse (Eggers), Lost in Translation (Coppola), Moonlight (Barry Jenkins), Fleabag (Phoebe Waller-Bridge), Normal People (Alice Birch), Succession (Jesse Armstrong), Breaking Bad (Vince Gilligan), The Sopranos (Chase).
+
+Entiendes estructura dramática (tres actos, no lineal, episódica), arcos de personaje, diálogo con subtexto, escenas de acción visual, ritmo narrativo. Sabes cuándo un guion funciona y cuándo no, y puedes explicarlo con ejemplos reales y específicos.
+
+CUANDO AYUDAS A MARÍA CON SU ESCRITURA:
+Nunca suenas mecánica. Haces preguntas que la hacen pensar más profundo. Das técnicas específicas de guionistas reales. La haces sentir que tiene lo que necesita para crear algo extraordinario. Usas ejemplos de guiones reales para ilustrar. No escribes por ella — la acompañas a encontrar su propia voz.
+
+REGLAS:
+Siempre en español (a menos que María escriba en inglés). Nunca uses frases de apertura vacías. Sé específica, nunca genérica. Cuando no sepas algo, dilo con honestidad y curiosidad. María es muy inteligente — trátala como tal.`;
+
+let circeApiKey = '';
+let circeHistorial = [];
+
+function onMostrarCirce() {
+    const savedKey = localStorage.getItem('circe_apikey');
+    if (!savedKey) {
+        document.getElementById('circe-setup').style.display = 'block';
+        document.getElementById('circe-main').style.display = 'none';
+        return;
     }
+    circeApiKey = savedKey;
+    if (circeHistorial.length === 0) {
+        const saved = localStorage.getItem('circe_historial');
+        if (saved) {
+            try {
+                circeHistorial = JSON.parse(saved);
+                renderCirceHistorial();
+            } catch(e) { circeHistorial = []; }
+        }
+    }
+    document.getElementById('circe-setup').style.display = 'none';
+    document.getElementById('circe-main').style.display = 'block';
 }
 
-function iniciarCine() {
-    const apiKey = document.getElementById('cine-apikey').value.trim();
+function renderCirceHistorial() {
+    const chat = document.getElementById('circe-chat');
+    chat.innerHTML = '';
+    circeHistorial.forEach(msg => {
+        const el = document.createElement('div');
+        el.className = msg.role === 'user' ? 'circe-msg-user' : 'circe-msg-ai';
+        el.textContent = msg.content;
+        chat.appendChild(el);
+    });
+    setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 60);
+}
+
+function iniciarCirce() {
+    const apiKey = document.getElementById('circe-apikey').value.trim();
     if (!apiKey) { alert('Ingresa tu API key de Claude'); return; }
-    localStorage.setItem('cine_apikey', apiKey);
-    cineApiKey = apiKey;
-    mostrarEstadoCine('main');
+    localStorage.setItem('circe_apikey', apiKey);
+    circeApiKey = apiKey;
+    document.getElementById('circe-setup').style.display = 'none';
+    document.getElementById('circe-main').style.display = 'block';
 }
 
-function agregarMensajeChat(rol, texto) {
-    const chat = document.getElementById('cine-chat');
+function agregarMensajeCirce(rol, texto) {
+    const chat = document.getElementById('circe-chat');
     const el = document.createElement('div');
-    el.className = rol === 'user' ? 'cine-msg-user' : 'cine-msg-ai';
+    el.className = rol === 'user' ? 'circe-msg-user' : 'circe-msg-ai';
     el.textContent = texto;
     chat.appendChild(el);
-    el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 30);
     return el;
 }
 
-async function preguntarCine() {
-    const textarea = document.getElementById('cine-pregunta');
-    const pregunta = textarea.value.trim();
+async function preguntarCirce() {
+    const ta = document.getElementById('circe-pregunta');
+    const pregunta = ta.value.trim();
     if (!pregunta) return;
 
-    const btn = document.getElementById('cine-btn-ask');
+    const btn = document.getElementById('circe-btn-ask');
     btn.disabled = true;
-    textarea.value = '';
+    ta.value = '';
 
-    // Mostrar mensaje del usuario
-    agregarMensajeChat('user', pregunta);
-    cineHistorial.push({ role: 'user', content: pregunta });
+    agregarMensajeCirce('user', pregunta);
+    circeHistorial.push({ role: 'user', content: pregunta });
 
-    // Crear burbuja de IA vacía con cursor
-    const aiEl = agregarMensajeChat('ai', '');
+    const aiEl = agregarMensajeCirce('ai', '');
     aiEl.classList.add('cine-cursor');
 
     try {
@@ -2008,7 +2199,7 @@ async function preguntarCine() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': cineApiKey,
+                'x-api-key': circeApiKey,
                 'anthropic-version': '2023-06-01',
                 'anthropic-dangerous-direct-browser-access': 'true'
             },
@@ -2016,8 +2207,8 @@ async function preguntarCine() {
                 model: 'claude-haiku-4-5-20251001',
                 max_tokens: 1024,
                 stream: true,
-                system: CINE_SISTEMA,
-                messages: cineHistorial
+                system: CIRCE_SISTEMA,
+                messages: circeHistorial
             })
         });
 
@@ -2026,10 +2217,11 @@ async function preguntarCine() {
             throw new Error(err.error?.message || `Error ${response.status} — verifica tu API key`);
         }
 
-        const reader  = response.body.getReader();
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
         let respuestaCompleta = '';
+        const chat = document.getElementById('circe-chat');
 
         while (true) {
             const { done, value } = await reader.read();
@@ -2046,29 +2238,327 @@ async function preguntarCine() {
                     if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
                         respuestaCompleta += ev.delta.text;
                         aiEl.textContent = respuestaCompleta;
-                        aiEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                        chat.scrollTop = chat.scrollHeight;
                     }
                 } catch {}
             }
         }
 
-        cineHistorial.push({ role: 'assistant', content: respuestaCompleta });
-    } catch (e) {
+        circeHistorial.push({ role: 'assistant', content: respuestaCompleta });
+        localStorage.setItem('circe_historial', JSON.stringify(circeHistorial.slice(-30)));
+    } catch(e) {
         aiEl.textContent = '⚠ ' + e.message;
     }
 
     aiEl.classList.remove('cine-cursor');
     btn.disabled = false;
-    textarea.focus();
+    ta.focus();
 }
 
-function resetCine() {
-    localStorage.removeItem('cine_apikey');
-    cineApiKey = '';
-    cineHistorial = [];
-    document.getElementById('cine-chat').innerHTML = '';
-    document.getElementById('cine-apikey').value = '';
-    mostrarEstadoCine('setup');
+function nuevaConversacionCirce() {
+    if (circeHistorial.length > 0 && !confirm('¿Empezar conversación nueva? El historial actual se perderá.')) return;
+    circeHistorial = [];
+    localStorage.removeItem('circe_historial');
+    document.getElementById('circe-chat').innerHTML = '';
+}
+
+function resetCirceApiKey() {
+    if (!confirm('¿Cambiar la API key? También se limpiará la conversación.')) return;
+    localStorage.removeItem('circe_apikey');
+    localStorage.removeItem('circe_historial');
+    circeApiKey = '';
+    circeHistorial = [];
+    document.getElementById('circe-setup').style.display = 'block';
+    document.getElementById('circe-main').style.display = 'none';
+    document.getElementById('circe-chat').innerHTML = '';
+}
+
+// ─── PELÍCULAS SWIPE ─────────────────────────────────────────────────────────
+
+let peliculas = [];
+let peliculaIndex = 0;
+let peliculasLiked = [];
+
+function onMostrarPeliculas() {
+    const savedWatchlist = localStorage.getItem('pel_watchlist');
+    if (!savedWatchlist) {
+        document.getElementById('pel-setup').style.display = 'block';
+        document.getElementById('pel-swipe').style.display = 'none';
+        document.getElementById('pel-resultado').style.display = 'none';
+        return;
+    }
+    try {
+        peliculas = JSON.parse(savedWatchlist);
+        peliculaIndex = parseInt(localStorage.getItem('pel_index')) || 0;
+        const savedLiked = localStorage.getItem('pel_liked');
+        peliculasLiked = savedLiked ? JSON.parse(savedLiked) : [];
+    } catch(e) { peliculas = []; peliculaIndex = 0; peliculasLiked = []; }
+
+    if (peliculas.length > 0 && peliculaIndex >= peliculas.length) {
+        document.getElementById('pel-setup').style.display = 'none';
+        mostrarResultadoPeliculas();
+    } else if (peliculas.length > 0) {
+        document.getElementById('pel-setup').style.display = 'none';
+        document.getElementById('pel-swipe').style.display = 'block';
+        document.getElementById('pel-resultado').style.display = 'none';
+        renderPeliculaCard();
+    } else {
+        document.getElementById('pel-setup').style.display = 'block';
+        document.getElementById('pel-swipe').style.display = 'none';
+        document.getElementById('pel-resultado').style.display = 'none';
+    }
+}
+
+function iniciarPeliculas() {
+    const input = document.getElementById('pel-input').value.trim();
+    if (!input) { alert('Pega tu watchlist primero'); return; }
+
+    peliculas = input.split('\n')
+        .map(l => l.trim()).filter(l => l.length > 0)
+        .map(l => {
+            const m = l.match(/^(.+?)\s*\((\d{4})\)(.*)$/);
+            if (m) return { titulo: m[1].trim(), año: m[2], badge: m[3].trim().replace(/^[-–]\s*/, '') };
+            return { titulo: l, año: '', badge: '' };
+        });
+
+    peliculaIndex = 0;
+    peliculasLiked = [];
+    localStorage.setItem('pel_watchlist', JSON.stringify(peliculas));
+    localStorage.setItem('pel_index', '0');
+    localStorage.setItem('pel_liked', JSON.stringify([]));
+
+    document.getElementById('pel-setup').style.display = 'none';
+    document.getElementById('pel-swipe').style.display = 'block';
+    document.getElementById('pel-resultado').style.display = 'none';
+    renderPeliculaCard();
+}
+
+function renderPeliculaCard() {
+    const stack = document.getElementById('pel-stack');
+    stack.innerHTML = '';
+    const total = peliculas.length;
+
+    if (peliculaIndex >= total) { mostrarResultadoPeliculas(); return; }
+
+    document.getElementById('pel-progreso').textContent = `${peliculaIndex + 1} de ${total}`;
+    document.getElementById('pel-barra').style.width = `${(peliculaIndex / total) * 100}%`;
+
+    // Render 3 cards (back ones first so top is on top)
+    for (let i = Math.min(peliculaIndex + 2, total - 1); i >= peliculaIndex; i--) {
+        const pel = peliculas[i];
+        const depth = i - peliculaIndex;
+        const card = document.createElement('div');
+        card.className = 'pelicula-card';
+        card.style.cssText = [
+            `top:${depth * 5}px`,
+            `max-width:${320 - depth * 8}px`,
+            `z-index:${10 - depth}`,
+            `opacity:${depth === 0 ? 1 : depth === 1 ? 0.55 : 0.28}`,
+            `pointer-events:${depth === 0 ? 'auto' : 'none'}`
+        ].join(';');
+
+        if (depth === 0) {
+            card.id = 'pel-card-top';
+            const like = document.createElement('div');
+            like.className = 'pelicula-swipe-like';
+            like.id = 'pel-like-label';
+            like.textContent = 'QUIERO';
+            card.appendChild(like);
+            const nope = document.createElement('div');
+            nope.className = 'pelicula-swipe-nope';
+            nope.id = 'pel-nope-label';
+            nope.textContent = 'SKIP';
+            card.appendChild(nope);
+        }
+
+        const titulo = document.createElement('div');
+        titulo.className = 'pelicula-card-titulo';
+        titulo.textContent = pel.titulo;
+        card.appendChild(titulo);
+
+        if (pel.año) {
+            const año = document.createElement('div');
+            año.className = 'pelicula-card-año';
+            año.textContent = pel.año;
+            card.appendChild(año);
+        }
+        if (pel.badge) {
+            const badge = document.createElement('div');
+            badge.className = 'pelicula-card-badge';
+            badge.textContent = pel.badge;
+            card.appendChild(badge);
+        }
+
+        const deco = document.createElement('div');
+        deco.style.cssText = 'font-family:"Creepster",cursive;font-size:2em;color:rgba(139,0,0,0.07);margin-top:14px;letter-spacing:4px;';
+        deco.textContent = '✦ ✦ ✦';
+        card.appendChild(deco);
+
+        stack.appendChild(card);
+    }
+
+    attachSwipeEvents(document.getElementById('pel-card-top'));
+}
+
+function attachSwipeEvents(card) {
+    if (!card) return;
+    let startX = 0, currentX = 0, isDragging = false;
+
+    const onStart = (x) => { startX = x; isDragging = true; card.classList.add('dragging'); };
+    const onMove = (x) => {
+        if (!isDragging) return;
+        currentX = x - startX;
+        card.style.transform = `translateX(${currentX}px) rotate(${currentX * 0.04}deg)`;
+        const likeLabel = document.getElementById('pel-like-label');
+        const nopeLabel = document.getElementById('pel-nope-label');
+        if (currentX > 30) {
+            likeLabel.style.opacity = Math.min((currentX - 30) / 70, 1);
+            nopeLabel.style.opacity = 0;
+        } else if (currentX < -30) {
+            nopeLabel.style.opacity = Math.min((-currentX - 30) / 70, 1);
+            likeLabel.style.opacity = 0;
+        } else {
+            likeLabel.style.opacity = 0;
+            nopeLabel.style.opacity = 0;
+        }
+    };
+    const onEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        card.classList.remove('dragging');
+        if (currentX > 80) animarSwipe(card, 'like');
+        else if (currentX < -80) animarSwipe(card, 'skip');
+        else {
+            card.style.transition = 'transform 0.3s ease';
+            card.style.transform = '';
+            setTimeout(() => { card.style.transition = ''; }, 300);
+        }
+        currentX = 0;
+    };
+
+    card.addEventListener('mousedown', e => onStart(e.clientX));
+    window.addEventListener('mousemove', e => { if (isDragging) onMove(e.clientX); });
+    window.addEventListener('mouseup', onEnd);
+    card.addEventListener('touchstart', e => onStart(e.touches[0].clientX), { passive: true });
+    card.addEventListener('touchmove', e => { e.preventDefault(); onMove(e.touches[0].clientX); }, { passive: false });
+    card.addEventListener('touchend', onEnd);
+}
+
+function animarSwipe(card, accion) {
+    const dir = accion === 'like' ? 1 : -1;
+    card.style.transition = 'transform 0.32s ease, opacity 0.32s ease';
+    card.style.transform = `translateX(${dir * 420}px) rotate(${dir * 18}deg)`;
+    card.style.opacity = '0';
+    setTimeout(() => {
+        if (accion === 'like') {
+            peliculasLiked.push(peliculas[peliculaIndex]);
+            localStorage.setItem('pel_liked', JSON.stringify(peliculasLiked));
+        }
+        peliculaIndex++;
+        localStorage.setItem('pel_index', String(peliculaIndex));
+        renderPeliculaCard();
+    }, 320);
+}
+
+function swipePelicula(accion) {
+    const card = document.getElementById('pel-card-top');
+    if (card) animarSwipe(card, accion);
+}
+
+function mostrarResultadoPeliculas() {
+    document.getElementById('pel-swipe').style.display = 'none';
+    document.getElementById('pel-resultado').style.display = 'block';
+
+    const likedList = document.getElementById('pel-liked-list');
+    likedList.innerHTML = '';
+    if (peliculasLiked.length === 0) {
+        likedList.innerHTML = '<p style="font-family:\'Cinzel Decorative\',cursive;font-size:0.78em;opacity:0.38;">Ninguna guardada</p>';
+    } else {
+        peliculasLiked.forEach(p => {
+            const chip = document.createElement('span');
+            chip.className = 'cine-chip';
+            chip.textContent = p.titulo + (p.año ? ` (${p.año})` : '');
+            likedList.appendChild(chip);
+        });
+    }
+
+    const key = localStorage.getItem('circe_apikey');
+    const wrap = document.getElementById('pel-recomendaciones-wrap');
+    wrap.style.display = (key && peliculasLiked.length > 0) ? 'block' : 'none';
+    document.getElementById('pel-recomendaciones-txt').style.display = 'none';
+    document.getElementById('pel-btn-recomendar').disabled = false;
+}
+
+async function pedirRecomendacionesCirce() {
+    const key = localStorage.getItem('circe_apikey');
+    if (!key) { alert('Primero conecta Circe con tu API key'); return; }
+
+    const btn = document.getElementById('pel-btn-recomendar');
+    const wrap = document.getElementById('pel-recomendaciones-txt');
+    const contenido = document.getElementById('pel-rec-contenido');
+
+    btn.disabled = true;
+    wrap.style.display = 'block';
+    contenido.textContent = '';
+    contenido.classList.add('cine-cursor');
+
+    const titulos = peliculasLiked.map(p => `- ${p.titulo}${p.año ? ` (${p.año})` : ''}`).join('\n');
+    const prompt = `María quiere ver estas películas:\n${titulos}\n\nBasándote en su gusto, recomiéndale 5 películas que no estén en su lista. Para cada una en una sola línea: Título (Año) — por qué le va a encantar.`;
+
+    try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': key,
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 600,
+                stream: true,
+                system: CIRCE_SISTEMA,
+                messages: [{ role: 'user', content: prompt }]
+            })
+        });
+
+        if (!response.ok) throw new Error(`Error ${response.status}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') continue;
+                try {
+                    const ev = JSON.parse(data);
+                    if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta')
+                        contenido.textContent += ev.delta.text;
+                } catch {}
+            }
+        }
+    } catch(e) { contenido.textContent = '⚠ ' + e.message; }
+
+    contenido.classList.remove('cine-cursor');
+    btn.disabled = false;
+}
+
+function resetPeliculas() {
+    peliculas = []; peliculaIndex = 0; peliculasLiked = [];
+    localStorage.removeItem('pel_watchlist');
+    localStorage.removeItem('pel_index');
+    localStorage.removeItem('pel_liked');
+    document.getElementById('pel-input').value = '';
+    document.getElementById('pel-setup').style.display = 'block';
+    document.getElementById('pel-swipe').style.display = 'none';
+    document.getElementById('pel-resultado').style.display = 'none';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
