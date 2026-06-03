@@ -81,7 +81,6 @@
             width: 200px;
             height: auto;
             margin-bottom: 15px;
-            mix-blend-mode: multiply;
         }
 
         /* Estilos para la galería - Versión gótica */
@@ -763,7 +762,7 @@
 
 <!-- Página principal -->
 <div class="container" id="inicio" style="display: none;">
-    <img src="https://i.postimg.cc/3N5jTdGp/Untitled-design.png" alt="Nosotras" class="foto-sticker">
+    <img id="img-sticker" src="https://i.postimg.cc/3N5jTdGp/Untitled-design.png" alt="Nosotras" class="foto-sticker">
     <h1>Hola Novia :)</h1>
     <p>Tiempo que llevamos juntas:</p>
     <div class="timer" id="timer">Cargando...</div>
@@ -2037,7 +2036,38 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', guardarEstadoCheckboxes);
     });
+    quitarFondoSticker();
 });
+
+function quitarFondoSticker() {
+    const imgEl = document.getElementById('img-sticker');
+    if (!imgEl) return;
+    const tmp = new Image();
+    tmp.crossOrigin = 'anonymous';
+    tmp.onload = function() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = tmp.naturalWidth;
+            canvas.height = tmp.naturalHeight;
+            canvas.className = imgEl.className;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(tmp, 0, 0);
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const d = imgData.data;
+            for (let i = 0; i < d.length; i += 4) {
+                const r = d[i], g = d[i+1], b = d[i+2];
+                const avg = (r + g + b) / 3;
+                const spread = Math.max(r, g, b) - Math.min(r, g, b);
+                if (avg > 200 && spread < 40) {
+                    d[i+3] = avg > 230 ? 0 : Math.round(((230 - avg) / 30) * 255);
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            imgEl.parentNode.replaceChild(canvas, imgEl);
+        } catch(e) { /* CORS bloqueado, se muestra la imagen original */ }
+    };
+    tmp.src = imgEl.src;
+}
 
 // ─── CIRCE ───────────────────────────────────────────────────────────────────
 
