@@ -2156,9 +2156,10 @@ function mostrarEstadoCirce(estado) {
 }
 
 function onMostrarCirce() {
-    const savedKey = localStorage.getItem('circe_apikey');
+    const savedKey = _leerApiKey();
     if (!savedKey) { mostrarEstadoCirce('setup'); return; }
     circeApiKey = savedKey;
+    _guardarApiKey(savedKey); // renovar cookie
 
     if (circeHistorial.length === 0) {
         // Intentar cargar la conversación activa
@@ -2179,10 +2180,20 @@ function onMostrarCirce() {
     mostrarEstadoCirce('main');
 }
 
+function _guardarApiKey(k) {
+    localStorage.setItem('circe_apikey', k);
+    document.cookie = 'cak=' + encodeURIComponent(k) + ';max-age=31536000;path=/;SameSite=Strict';
+}
+function _leerApiKey() {
+    return localStorage.getItem('circe_apikey')
+        || (document.cookie.match(/(?:^|;\s*)cak=([^;]*)/) || [])[1]?.split('%').reduce((a, b, i) =>
+            i ? a + decodeURIComponent('%' + b) : b, '') || null;
+}
+
 function iniciarCirce() {
     const apiKey = document.getElementById('circe-apikey').value.trim();
-    if (!apiKey) { alert('Ingresa tu API key de Claude'); return; }
-    localStorage.setItem('circe_apikey', apiKey);
+    if (!apiKey) { alert('Ingresa tu API key'); return; }
+    _guardarApiKey(apiKey);
     circeApiKey = apiKey;
     circeConvId = 'conv_' + Date.now();
     localStorage.setItem('circe_conv_id', circeConvId);
@@ -2290,7 +2301,7 @@ async function preguntarCirce() {
             body: JSON.stringify({
                 model: 'claude-haiku-4-5-20251001',
                 max_tokens: 1024,
-                stream: true,
+                stream: false,
                 system: CIRCE_SISTEMA,
                 messages: apiMessages
             })
@@ -2298,34 +2309,13 @@ async function preguntarCirce() {
 
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `Error ${response.status} — verifica tu API key`);
+            throw new Error(err.error?.message || `Error ${response.status}`);
         }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '', respuestaCompleta = '';
-        const chat = document.getElementById('circe-chat');
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            for (const line of lines) {
-                if (!line.startsWith('data: ')) continue;
-                const data = line.slice(6).trim();
-                if (data === '[DONE]') continue;
-                try {
-                    const ev = JSON.parse(data);
-                    if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-                        respuestaCompleta += ev.delta.text;
-                        aiEl.textContent = respuestaCompleta;
-                        chat.scrollTop = chat.scrollHeight;
-                    }
-                } catch {}
-            }
-        }
+        const data = await response.json();
+        const respuestaCompleta = data.content?.[0]?.text || '(sin respuesta)';
+        aiEl.textContent = respuestaCompleta;
+        document.getElementById('circe-chat').scrollTop = document.getElementById('circe-chat').scrollHeight;
 
         circeHistorial.push({ role: 'assistant', content: respuestaCompleta });
         guardarConversacionActual();
