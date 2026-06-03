@@ -2346,13 +2346,17 @@ async function preguntarCirce() {
             messages: apiMessages
         });
 
+        // Warn if payload is very large (> 30 MB)
+        if (payload.length > 31457280) {
+            throw new Error('El archivo es demasiado grande para enviar (>30 MB). Prueba con uno más pequeño.');
+        }
+
         const data = await new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('POST', 'https://api.anthropic.com/v1/messages');
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.setRequestHeader('x-api-key', circeApiKey);
             xhr.setRequestHeader('anthropic-version', '2023-06-01');
-            xhr.setRequestHeader('anthropic-beta', 'files-api-2025-04-14');
             xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
             xhr.onload = () => {
                 try {
@@ -2361,9 +2365,9 @@ async function preguntarCirce() {
                     else reject(new Error(res.error?.message || `Error ${xhr.status}`));
                 } catch { reject(new Error('Respuesta inválida')); }
             };
-            xhr.onerror = () => reject(new Error('Sin conexión'));
-            xhr.ontimeout = () => reject(new Error('Tiempo agotado'));
-            xhr.timeout = 60000;
+            xhr.onerror = () => reject(new Error('Error de red. Si el archivo es muy pesado, prueba con uno más chico.'));
+            xhr.ontimeout = () => reject(new Error('Tardó demasiado. El archivo puede ser muy pesado.'));
+            xhr.timeout = 120000;
             xhr.send(payload);
         });
 
@@ -2375,6 +2379,10 @@ async function preguntarCirce() {
         guardarConversacionActual();
     } catch(e) {
         aiEl.textContent = '⚠ ' + e.message;
+        // Remove the failed user message so history stays alternating user/assistant
+        if (circeHistorial[circeHistorial.length - 1]?.role === 'user') {
+            circeHistorial.pop();
+        }
     }
 
     aiEl.classList.remove('cine-cursor');
