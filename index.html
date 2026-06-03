@@ -726,15 +726,22 @@
         }
         #circe-adjunto-preview {
             display: none;
-            align-items: center;
-            gap: 10px;
+            flex-wrap: wrap;
+            gap: 6px;
             padding: 8px 12px;
             background: rgba(20,5,5,0.75);
             border: 1px solid rgba(139,0,0,0.2);
             margin-bottom: 6px;
         }
-        #circe-adjunto-thumb { max-height: 60px; max-width: 100px; display: none; }
-        #circe-adjunto-video { max-height: 70px; max-width: 120px; display: none; }
+        .adjunto-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(139,0,0,0.13); border: 1px solid rgba(139,0,0,0.28);
+            padding: 4px 8px; font-family: 'Cinzel Decorative', cursive; font-size: 0.68em;
+            color: rgba(224,224,224,0.55); max-width: 180px;
+        }
+        .adjunto-chip img { width: 38px; height: 38px; object-fit: cover; flex-shrink: 0; }
+        .adjunto-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .adjunto-chip button { background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 1.1em; padding: 0 2px; flex-shrink: 0; }
 
     </style>
 </head>
@@ -1706,10 +1713,7 @@
 
         <!-- Attachment preview -->
         <div id="circe-adjunto-preview">
-            <img id="circe-adjunto-thumb" alt="imagen adjunta">
-            <video id="circe-adjunto-video" muted playsinline></video>
-            <div style="flex:1; font-family:'Cinzel Decorative',cursive; font-size:0.68em; color:rgba(224,224,224,0.45);" id="circe-adjunto-nombre"></div>
-            <button onclick="quitarArchivoCirce()" style="background:none; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:1em; padding:2px 6px;">&times;</button>
+            <div id="circe-adjuntos-chips" style="display:flex;flex-wrap:wrap;gap:6px;width:100%;"></div>
         </div>
 
         <!-- Input -->
@@ -1717,7 +1721,7 @@
             <textarea id="circe-pregunta" rows="3" placeholder="Escribe a Circe..." class="cine-input"
                 style="resize:none; line-height:1.6; margin:0; padding-right:76px;"
                 onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();preguntarCirce();}"></textarea>
-            <input type="file" id="circe-file-input" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" onchange="adjuntarArchivoCirce(this)">
+            <input type="file" id="circe-file-input" accept="image/*,video/*,application/pdf,.pdf,.doc,.docx,.txt" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" onchange="adjuntarArchivoCirce(this)">
             <div style="position:absolute; right:8px; bottom:10px; display:flex; gap:4px; align-items:center;">
                 <label for="circe-file-input"
                     style="color:rgba(224,224,224,0.28); cursor:pointer; font-size:1.05em; padding:4px; display:flex; align-items:center; line-height:1;" title="Adjuntar foto, video o documento">
@@ -2046,7 +2050,7 @@ Siempre en español (a menos que María escriba en inglés). Nunca uses frases d
 let circeApiKey = '';
 let circeHistorial = [];      // [{role, content, _imageData?, _videoUrl?}]
 let circeConvId = null;
-let circeArchivoAdjunto = null; // {type:'image'|'video', base64?, mediaType?, previewUrl, nombre}
+let circeArchivosAdjuntos = []; // [{type:'image'|'video'|'document', base64?, mediaType?, previewUrl, nombre}]
 
 // ── Compresión de imagen ──────────────────────────────────────────────────────
 function comprimirImagen(file, maxDim = 1024, quality = 0.82) {
@@ -2074,53 +2078,67 @@ function comprimirImagen(file, maxDim = 1024, quality = 0.82) {
 
 // ── Adjuntos ──────────────────────────────────────────────────────────────────
 async function adjuntarArchivoCirce(input) {
-    const file = input.files[0];
-    if (!file) return;
-    // reset so the same file can be picked again
+    const files = Array.from(input.files);
+    if (!files.length) return;
     setTimeout(() => { input.value = ''; }, 100);
-    const nombre = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
 
-    if (file.type.startsWith('image/')) {
-        const comp = await comprimirImagen(file);
-        circeArchivoAdjunto = { type: 'image', ...comp, nombre };
-        document.getElementById('circe-adjunto-thumb').src = comp.previewUrl;
-        document.getElementById('circe-adjunto-thumb').style.display = 'block';
-        document.getElementById('circe-adjunto-video').style.display = 'none';
-    } else if (file.type.startsWith('video/')) {
-        const url = URL.createObjectURL(file);
-        circeArchivoAdjunto = { type: 'video', previewUrl: url, nombre };
-        const vid = document.getElementById('circe-adjunto-video');
-        vid.src = url; vid.style.display = 'block';
-        document.getElementById('circe-adjunto-thumb').style.display = 'none';
-    } else if (file.type === 'application/pdf' || file.name.match(/\.(pdf|doc|docx|txt)$/i)) {
-        // Leer como base64 para enviarlo a Claude
-        const base64 = await new Promise(res => {
-            const reader = new FileReader();
-            reader.onload = e => res(e.target.result.split(',')[1]);
-            reader.readAsDataURL(file);
-        });
-        const mediaType = file.type || 'application/pdf';
-        circeArchivoAdjunto = { type: 'document', base64, mediaType, nombre };
-        document.getElementById('circe-adjunto-thumb').style.display = 'none';
-        document.getElementById('circe-adjunto-video').style.display = 'none';
-    } else {
-        alert('Formato no compatible. Puedes subir imágenes, videos o documentos PDF/Word/TXT.'); return;
+    for (const file of files) {
+        const nombre = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
+        if (file.type.startsWith('image/')) {
+            const comp = await comprimirImagen(file);
+            circeArchivosAdjuntos.push({ type: 'image', ...comp, nombre });
+        } else if (file.type.startsWith('video/')) {
+            circeArchivosAdjuntos.push({ type: 'video', previewUrl: URL.createObjectURL(file), nombre });
+        } else if (file.type.includes('pdf') || file.name.match(/\.(pdf|doc|docx|txt)$/i)) {
+            try {
+                const base64 = await new Promise((res, rej) => {
+                    const reader = new FileReader();
+                    reader.onload = e => res(e.target.result.split(',')[1]);
+                    reader.onerror = rej;
+                    reader.readAsDataURL(file);
+                });
+                const mediaType = file.type.includes('pdf') ? 'application/pdf' : (file.type || 'application/pdf');
+                circeArchivosAdjuntos.push({ type: 'document', base64, mediaType, nombre });
+            } catch(e) {
+                alert('No se pudo leer: ' + nombre);
+            }
+        } else {
+            alert('Formato no compatible: ' + nombre);
+        }
     }
-    document.getElementById('circe-adjunto-nombre').textContent = nombre;
-    document.getElementById('circe-adjunto-preview').style.display = 'flex';
+    renderAdjuntosPreview();
+}
+
+function renderAdjuntosPreview() {
+    const preview = document.getElementById('circe-adjunto-preview');
+    const chips = document.getElementById('circe-adjuntos-chips');
+    if (circeArchivosAdjuntos.length === 0) { preview.style.display = 'none'; chips.innerHTML = ''; return; }
+    preview.style.display = 'flex';
+    chips.innerHTML = '';
+    circeArchivosAdjuntos.forEach((adj, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'adjunto-chip';
+        const icon = adj.type === 'image' ? `<img src="${adj.previewUrl}">` : `<i class="fas fa-${adj.type === 'video' ? 'video' : 'file-lines'}"></i>`;
+        chip.innerHTML = `${icon}<span>${adj.nombre}</span><button onclick="quitarAdjunto(${i})">&times;</button>`;
+        chips.appendChild(chip);
+    });
+}
+
+function quitarAdjunto(i) {
+    circeArchivosAdjuntos.splice(i, 1);
+    renderAdjuntosPreview();
 }
 
 function quitarArchivoCirce() {
-    circeArchivoAdjunto = null;
-    document.getElementById('circe-adjunto-preview').style.display = 'none';
-    document.getElementById('circe-adjunto-thumb').src = '';
-    document.getElementById('circe-adjunto-video').src = '';
+    circeArchivosAdjuntos = [];
+    renderAdjuntosPreview();
 }
 
 // ── Conversaciones guardadas ──────────────────────────────────────────────────
 function sanitizarMsgs(msgs) {
     return msgs.map(m => {
         const s = { role: m.role, content: m.content || '' };
+        if (m._archivos?.length) s.content = (s.content ? s.content + ' ' : '') + m._archivos.map(a => a.type === 'image' ? '[imagen]' : a.type === 'video' ? '[video]' : `[doc: ${a.nombre || 'archivo'}]`).join(' ');
         if (m._imageData) s.content = (s.content ? s.content + ' ' : '') + '[imagen]';
         if (m._videoUrl)  s.content = (s.content ? s.content + ' ' : '') + '[video]';
         if (m._docData)   s.content = (s.content ? s.content + ' ' : '') + `[doc: ${m._docData.nombre || 'archivo'}]`;
@@ -2206,6 +2224,7 @@ function renderCirceHistorial() {
     chat.innerHTML = '';
     circeHistorial.forEach(msg => {
         agregarMensajeCirce(msg.role === 'user' ? 'user' : 'ai', msg.content || '', {
+            archivos:  msg._archivos || [],
             imageUrl:  msg._imageData?.previewUrl || null,
             videoUrl:  msg._videoUrl || null,
             docNombre: msg._docData?.nombre || null
@@ -2214,28 +2233,34 @@ function renderCirceHistorial() {
     setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 60);
 }
 
-function agregarMensajeCirce(rol, texto, { imageUrl, videoUrl, docNombre } = {}) {
+function agregarMensajeCirce(rol, texto, { archivos = [], imageUrl, videoUrl, docNombre } = {}) {
     const chat = document.getElementById('circe-chat');
     const el = document.createElement('div');
     el.className = rol === 'user' ? 'circe-msg-user' : 'circe-msg-ai';
 
-    if (imageUrl) {
-        const img = document.createElement('img');
-        img.src = imageUrl; img.className = 'circe-msg-img';
-        el.appendChild(img);
+    // soporte multi-archivo nuevo
+    for (const adj of archivos) {
+        if (adj.type === 'image') {
+            const img = document.createElement('img');
+            img.src = adj.previewUrl; img.className = 'circe-msg-img';
+            el.appendChild(img);
+        } else if (adj.type === 'video') {
+            const vid = document.createElement('video');
+            vid.src = adj.previewUrl; vid.controls = true;
+            vid.style.cssText = 'max-width:100%;max-height:180px;display:block;margin-bottom:6px;border:1px solid rgba(139,0,0,0.2);';
+            el.appendChild(vid);
+        } else {
+            const chip = document.createElement('div');
+            chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:rgba(139,0,0,0.12);border:1px solid rgba(139,0,0,0.25);padding:4px 10px;font-family:"Cinzel Decorative",cursive;font-size:0.7em;margin-bottom:6px;';
+            chip.innerHTML = '<i class="fas fa-file-lines"></i> ' + adj.nombre;
+            el.appendChild(chip);
+        }
     }
-    if (videoUrl) {
-        const vid = document.createElement('video');
-        vid.src = videoUrl; vid.controls = true;
-        vid.style.cssText = 'max-width:100%;max-height:180px;display:block;margin-bottom:6px;border:1px solid rgba(139,0,0,0.2);';
-        el.appendChild(vid);
-    }
-    if (docNombre) {
-        const chip = document.createElement('div');
-        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:rgba(139,0,0,0.12);border:1px solid rgba(139,0,0,0.25);padding:4px 10px;font-family:"Cinzel Decorative",cursive;font-size:0.7em;margin-bottom:6px;';
-        chip.innerHTML = '<i class="fas fa-file-lines"></i> ' + docNombre;
-        el.appendChild(chip);
-    }
+    // compatibilidad con mensajes viejos (imageUrl/videoUrl/docNombre)
+    if (imageUrl && !archivos.length) { const img = document.createElement('img'); img.src = imageUrl; img.className = 'circe-msg-img'; el.appendChild(img); }
+    if (videoUrl && !archivos.length) { const vid = document.createElement('video'); vid.src = videoUrl; vid.controls = true; vid.style.cssText = 'max-width:100%;max-height:180px;display:block;margin-bottom:6px;'; el.appendChild(vid); }
+    if (docNombre && !archivos.length) { const c = document.createElement('div'); c.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:rgba(139,0,0,0.12);border:1px solid rgba(139,0,0,0.25);padding:4px 10px;font-family:"Cinzel Decorative",cursive;font-size:0.7em;margin-bottom:6px;'; c.innerHTML = '<i class="fas fa-file-lines"></i> ' + docNombre; el.appendChild(c); }
+
     if (texto) el.appendChild(document.createTextNode(texto));
 
     chat.appendChild(el);
@@ -2247,8 +2272,8 @@ function agregarMensajeCirce(rol, texto, { imageUrl, videoUrl, docNombre } = {})
 async function preguntarCirce() {
     const ta = document.getElementById('circe-pregunta');
     const texto = ta.value.trim();
-    const adjunto = circeArchivoAdjunto;
-    if (!texto && !adjunto) return;
+    const adjuntos = [...circeArchivosAdjuntos];
+    if (!texto && !adjuntos.length) return;
 
     const btn = document.getElementById('circe-btn-ask');
     btn.disabled = true;
@@ -2256,32 +2281,44 @@ async function preguntarCirce() {
 
     // Entrada del usuario en historial
     const msgEntry = { role: 'user', content: texto };
-    if (adjunto?.type === 'image')    msgEntry._imageData = { data: adjunto.base64, mediaType: adjunto.mediaType, previewUrl: adjunto.previewUrl };
-    if (adjunto?.type === 'video')    msgEntry._videoUrl  = adjunto.previewUrl;
-    if (adjunto?.type === 'document') msgEntry._docData   = { data: adjunto.base64, mediaType: adjunto.mediaType, nombre: adjunto.nombre };
+    if (adjuntos.length) msgEntry._archivos = adjuntos.map(a => ({
+        type: a.type,
+        base64: a.base64,
+        mediaType: a.mediaType,
+        previewUrl: a.previewUrl,
+        nombre: a.nombre
+    }));
 
-    agregarMensajeCirce('user', texto, {
-        imageUrl:  adjunto?.type === 'image'    ? adjunto.previewUrl : null,
-        videoUrl:  adjunto?.type === 'video'    ? adjunto.previewUrl : null,
-        docNombre: adjunto?.type === 'document' ? adjunto.nombre     : null
-    });
+    agregarMensajeCirce('user', texto, { archivos: adjuntos });
     circeHistorial.push(msgEntry);
     quitarArchivoCirce();
 
     // Construir mensajes en formato API
     const apiMessages = circeHistorial.map(m => {
-        if (m._imageData) {
-            return { role: m.role, content: [
-                { type: 'image', source: { type: 'base64', media_type: m._imageData.mediaType, data: m._imageData.data } },
-                { type: 'text', text: m.content || 'Mira esta imagen' }
-            ]};
+        // nuevo formato multi-archivo
+        if (m._archivos?.length) {
+            const blocks = [];
+            for (const a of m._archivos) {
+                if (a.type === 'image' && a.base64)
+                    blocks.push({ type: 'image', source: { type: 'base64', media_type: a.mediaType, data: a.base64 } });
+                else if (a.type === 'document' && a.base64)
+                    blocks.push({ type: 'document', source: { type: 'base64', media_type: a.mediaType || 'application/pdf', data: a.base64 } });
+                else if (a.type === 'video')
+                    blocks.push({ type: 'text', text: '[La usuaria compartió un video: ' + a.nombre + ']' });
+            }
+            if (m.content) blocks.push({ type: 'text', text: m.content });
+            else if (!blocks.some(b => b.type === 'text')) blocks.push({ type: 'text', text: 'Analiza esto' });
+            return { role: m.role, content: blocks };
         }
-        if (m._docData) {
-            return { role: m.role, content: [
-                { type: 'document', source: { type: 'base64', media_type: m._docData.mediaType || 'application/pdf', data: m._docData.data } },
-                { type: 'text', text: m.content || 'Analiza este documento' }
-            ]};
-        }
+        // compatibilidad con formato viejo
+        if (m._imageData) return { role: m.role, content: [
+            { type: 'image', source: { type: 'base64', media_type: m._imageData.mediaType, data: m._imageData.data } },
+            { type: 'text', text: m.content || 'Mira esta imagen' }
+        ]};
+        if (m._docData) return { role: m.role, content: [
+            { type: 'document', source: { type: 'base64', media_type: m._docData.mediaType || 'application/pdf', data: m._docData.data } },
+            { type: 'text', text: m.content || 'Analiza este documento' }
+        ]};
         if (m._videoUrl) return { role: m.role, content: (m.content ? m.content + ' ' : '') + '[La usuaria compartió un video]' };
         return { role: m.role, content: m.content || '' };
     });
