@@ -2082,8 +2082,10 @@ async function adjuntarArchivoCirce(input) {
     setTimeout(() => { input.value = ''; }, 100);
 
     for (const file of files) {
+        const imagenesActuales = circeArchivosAdjuntos.filter(a => a.type === 'image').length;
         const nombre = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
         if (file.type.startsWith('image/')) {
+            if (imagenesActuales >= 20) { alert('Ya llegaste al límite de 20 fotos por mensaje.'); break; }
             const comp = await comprimirImagen(file);
             circeArchivosAdjuntos.push({ type: 'image', ...comp, nombre });
         } else if (file.type.startsWith('video/')) {
