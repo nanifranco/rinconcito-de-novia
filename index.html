@@ -704,6 +704,47 @@
             padding: 6px 0;
             scroll-behavior: smooth;
         }
+        .circe-conv-item {
+            padding: 12px 14px;
+            border-left: 2px solid rgba(139,0,0,0.28);
+            background: rgba(20,5,5,0.55);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .circe-conv-item:hover { border-left-color: var(--color-primario); background: rgba(30,8,8,0.75); }
+        .circe-conv-item.activa { border-left-color: var(--color-primario); }
+        .circe-conv-fecha {
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 0.6em;
+            color: rgba(224,224,224,0.3);
+            margin-bottom: 4px;
+        }
+        .circe-conv-preview {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8em;
+            color: rgba(224,224,224,0.6);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .circe-msg-img {
+            max-width: 100%;
+            max-height: 220px;
+            display: block;
+            margin-bottom: 6px;
+            border: 1px solid rgba(139,0,0,0.25);
+        }
+        #circe-adjunto-preview {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(20,5,5,0.75);
+            border: 1px solid rgba(139,0,0,0.2);
+            margin-bottom: 6px;
+        }
+        #circe-adjunto-thumb { max-height: 60px; max-width: 100px; display: none; }
+        #circe-adjunto-video { max-height: 70px; max-width: 120px; display: none; }
 
     </style>
 </head>
@@ -1659,32 +1700,74 @@
 
     <!-- CHAT -->
     <div id="circe-main" style="display:none;">
+        <!-- Header -->
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding:8px 12px; background:rgba(15,4,4,0.7); border:1px solid rgba(139,0,0,0.15);">
             <div style="font-family:'Cinzel Decorative',cursive; font-size:0.7em; color:var(--color-primario);">
                 <i class="fas fa-circle" style="font-size:0.45em; margin-right:6px; vertical-align:middle;"></i>Circe
             </div>
-            <div style="display:flex; gap:12px;">
+            <div style="display:flex; gap:14px;">
+                <button onclick="mostrarHistorialCirce()" style="background:none; border:none; color:rgba(255,255,255,0.28); cursor:pointer; font-size:0.66em; font-family:'Cinzel Decorative',cursive;" title="Ver conversaciones pasadas">
+                    <i class="fas fa-clock-rotate-left"></i> historial
+                </button>
                 <button onclick="nuevaConversacionCirce()" style="background:none; border:none; color:rgba(255,255,255,0.28); cursor:pointer; font-size:0.66em; font-family:'Cinzel Decorative',cursive;">
                     <i class="fas fa-plus"></i> nueva
-                </button>
-                <button onclick="resetCirceApiKey()" style="background:none; border:none; color:rgba(255,255,255,0.18); cursor:pointer; font-size:0.66em; font-family:'Cinzel Decorative',cursive;">
-                    <i class="fas fa-key"></i> key
                 </button>
             </div>
         </div>
 
+        <!-- Chat messages -->
         <div id="circe-chat"></div>
 
+        <!-- Attachment preview -->
+        <div id="circe-adjunto-preview">
+            <img id="circe-adjunto-thumb" alt="imagen adjunta">
+            <video id="circe-adjunto-video" muted playsinline></video>
+            <div style="flex:1; font-family:'Cinzel Decorative',cursive; font-size:0.68em; color:rgba(224,224,224,0.45);" id="circe-adjunto-nombre"></div>
+            <button onclick="quitarArchivoCirce()" style="background:none; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:1em; padding:2px 6px;">&times;</button>
+        </div>
+
+        <!-- Input -->
         <div style="position:relative;">
             <textarea id="circe-pregunta" rows="3" placeholder="Escribe a Circe..." class="cine-input"
-                style="resize:none; line-height:1.6; margin:0; padding-right:46px;"
+                style="resize:none; line-height:1.6; margin:0; padding-right:76px;"
                 onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();preguntarCirce();}"></textarea>
-            <button id="circe-btn-ask" onclick="preguntarCirce()"
-                style="position:absolute; right:10px; bottom:12px; background:none; border:none; color:var(--color-primario); cursor:pointer; font-size:1.15em; padding:4px;" title="Enviar (Ctrl+Enter)">
-                <i class="fas fa-paper-plane"></i>
+            <input type="file" id="circe-file-input" accept="image/*,video/*" style="display:none" onchange="adjuntarArchivoCirce(this)">
+            <div style="position:absolute; right:8px; bottom:10px; display:flex; gap:4px; align-items:center;">
+                <button onclick="document.getElementById('circe-file-input').click()"
+                    style="background:none; border:none; color:rgba(224,224,224,0.28); cursor:pointer; font-size:1.05em; padding:4px;" title="Adjuntar foto o video">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <button id="circe-btn-ask" onclick="preguntarCirce()"
+                    style="background:none; border:none; color:var(--color-primario); cursor:pointer; font-size:1.15em; padding:4px;" title="Enviar (Ctrl+Enter)">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        <div style="font-family:'Cinzel Decorative',cursive; font-size:0.6em; color:rgba(224,224,224,0.18); text-align:right; margin-top:4px;">Ctrl+Enter para enviar</div>
+    </div>
+
+    <!-- HISTORIAL DE CONVERSACIONES -->
+    <div id="circe-historial-panel" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding:8px 12px; background:rgba(15,4,4,0.7); border:1px solid rgba(139,0,0,0.15);">
+            <div style="font-family:'Cinzel Decorative',cursive; font-size:0.7em; color:rgba(224,224,224,0.45);">
+                Conversaciones guardadas
+            </div>
+            <button onclick="cerrarHistorialCirce()" style="background:none; border:none; color:rgba(255,255,255,0.28); cursor:pointer; font-size:0.66em; font-family:'Cinzel Decorative',cursive;">
+                <i class="fas fa-arrow-left"></i> volver
             </button>
         </div>
-        <div style="font-family:'Cinzel Decorative',cursive; font-size:0.62em; color:rgba(224,224,224,0.22); text-align:right; margin-top:4px;">Ctrl+Enter para enviar</div>
+
+        <div id="circe-lista-convs" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+        <div id="circe-convs-vacio" style="display:none; text-align:center; padding:28px 0; font-family:'Cinzel Decorative',cursive; font-size:0.75em; color:rgba(224,224,224,0.22);">
+            No hay conversaciones guardadas todavía
+        </div>
+
+        <div style="margin-top:18px; text-align:center;">
+            <button class="cine-btn" onclick="nuevaConversacionCirce()" style="font-size:0.78em;">
+                <i class="fas fa-plus"></i> &nbsp;Nueva conversación
+            </button>
+        </div>
     </div>
 
     <br>
@@ -1989,39 +2072,126 @@ REGLAS:
 Siempre en español (a menos que María escriba en inglés). Nunca uses frases de apertura vacías. Sé específica, nunca genérica. Cuando no sepas algo, dilo con honestidad y curiosidad. María es muy inteligente — trátala como tal.`;
 
 let circeApiKey = '';
-let circeHistorial = [];
+let circeHistorial = [];      // [{role, content, _imageData?, _videoUrl?}]
+let circeConvId = null;
+let circeArchivoAdjunto = null; // {type:'image'|'video', base64?, mediaType?, previewUrl, nombre}
+
+// ── Compresión de imagen ──────────────────────────────────────────────────────
+function comprimirImagen(file, maxDim = 1024, quality = 0.82) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg', previewUrl: dataUrl });
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// ── Adjuntos ──────────────────────────────────────────────────────────────────
+async function adjuntarArchivoCirce(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    const nombre = file.name.length > 28 ? file.name.slice(0, 25) + '...' : file.name;
+
+    if (file.type.startsWith('image/')) {
+        const comp = await comprimirImagen(file);
+        circeArchivoAdjunto = { type: 'image', ...comp, nombre };
+        document.getElementById('circe-adjunto-thumb').src = comp.previewUrl;
+        document.getElementById('circe-adjunto-thumb').style.display = 'block';
+        document.getElementById('circe-adjunto-video').style.display = 'none';
+    } else if (file.type.startsWith('video/')) {
+        const url = URL.createObjectURL(file);
+        circeArchivoAdjunto = { type: 'video', previewUrl: url, nombre };
+        const vid = document.getElementById('circe-adjunto-video');
+        vid.src = url; vid.style.display = 'block';
+        document.getElementById('circe-adjunto-thumb').style.display = 'none';
+    } else {
+        alert('Solo se admiten imágenes y videos'); return;
+    }
+    document.getElementById('circe-adjunto-nombre').textContent = nombre;
+    document.getElementById('circe-adjunto-preview').style.display = 'flex';
+}
+
+function quitarArchivoCirce() {
+    circeArchivoAdjunto = null;
+    document.getElementById('circe-adjunto-preview').style.display = 'none';
+    document.getElementById('circe-adjunto-thumb').src = '';
+    document.getElementById('circe-adjunto-video').src = '';
+}
+
+// ── Conversaciones guardadas ──────────────────────────────────────────────────
+function sanitizarMsgs(msgs) {
+    return msgs.map(m => {
+        const s = { role: m.role, content: m.content || '' };
+        if (m._imageData) s.content = (s.content ? s.content + ' ' : '') + '[imagen]';
+        if (m._videoUrl)  s.content = (s.content ? s.content + ' ' : '') + '[video]';
+        return s;
+    });
+}
+
+function cargarConversaciones() {
+    try { return JSON.parse(localStorage.getItem('circe_conversations') || '[]'); }
+    catch { return []; }
+}
+
+function guardarConversacionActual() {
+    if (circeHistorial.length === 0 || !circeConvId) return;
+    const convs = cargarConversaciones().filter(c => c.id !== circeConvId);
+    const primerMensaje = circeHistorial.find(m => m.role === 'user');
+    const preview = (primerMensaje?.content || '[imagen]').slice(0, 70);
+    convs.unshift({
+        id: circeConvId,
+        createdAt: new Date().toISOString(),
+        preview,
+        messages: sanitizarMsgs(circeHistorial)
+    });
+    localStorage.setItem('circe_conversations', JSON.stringify(convs.slice(0, 20)));
+}
+
+// ── Navegación de estados ─────────────────────────────────────────────────────
+function mostrarEstadoCirce(estado) {
+    ['circe-setup', 'circe-main', 'circe-historial-panel'].forEach(id => {
+        document.getElementById(id).style.display = 'none';
+    });
+    document.getElementById('circe-' + estado).style.display = 'block';
+}
 
 function onMostrarCirce() {
     const savedKey = localStorage.getItem('circe_apikey');
-    if (!savedKey) {
-        document.getElementById('circe-setup').style.display = 'block';
-        document.getElementById('circe-main').style.display = 'none';
-        return;
-    }
+    if (!savedKey) { mostrarEstadoCirce('setup'); return; }
     circeApiKey = savedKey;
+
     if (circeHistorial.length === 0) {
-        const saved = localStorage.getItem('circe_historial');
-        if (saved) {
-            try {
-                circeHistorial = JSON.parse(saved);
+        // Intentar cargar la conversación activa
+        const convId = localStorage.getItem('circe_conv_id');
+        if (convId) {
+            const conv = cargarConversaciones().find(c => c.id === convId);
+            if (conv && conv.messages.length > 0) {
+                circeConvId = convId;
+                circeHistorial = conv.messages;
                 renderCirceHistorial();
-            } catch(e) { circeHistorial = []; }
+            }
+        }
+        if (!circeConvId) {
+            circeConvId = 'conv_' + Date.now();
+            localStorage.setItem('circe_conv_id', circeConvId);
         }
     }
-    document.getElementById('circe-setup').style.display = 'none';
-    document.getElementById('circe-main').style.display = 'block';
-}
-
-function renderCirceHistorial() {
-    const chat = document.getElementById('circe-chat');
-    chat.innerHTML = '';
-    circeHistorial.forEach(msg => {
-        const el = document.createElement('div');
-        el.className = msg.role === 'user' ? 'circe-msg-user' : 'circe-msg-ai';
-        el.textContent = msg.content;
-        chat.appendChild(el);
-    });
-    setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 60);
+    mostrarEstadoCirce('main');
 }
 
 function iniciarCirce() {
@@ -2029,31 +2199,81 @@ function iniciarCirce() {
     if (!apiKey) { alert('Ingresa tu API key de Claude'); return; }
     localStorage.setItem('circe_apikey', apiKey);
     circeApiKey = apiKey;
-    document.getElementById('circe-setup').style.display = 'none';
-    document.getElementById('circe-main').style.display = 'block';
+    circeConvId = 'conv_' + Date.now();
+    localStorage.setItem('circe_conv_id', circeConvId);
+    mostrarEstadoCirce('main');
 }
 
-function agregarMensajeCirce(rol, texto) {
+// ── Render del chat ───────────────────────────────────────────────────────────
+function renderCirceHistorial() {
+    const chat = document.getElementById('circe-chat');
+    chat.innerHTML = '';
+    circeHistorial.forEach(msg => {
+        agregarMensajeCirce(msg.role === 'user' ? 'user' : 'ai', msg.content || '', {
+            imageUrl: msg._imageData?.previewUrl || null,
+            videoUrl: msg._videoUrl || null
+        });
+    });
+    setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 60);
+}
+
+function agregarMensajeCirce(rol, texto, { imageUrl, videoUrl } = {}) {
     const chat = document.getElementById('circe-chat');
     const el = document.createElement('div');
     el.className = rol === 'user' ? 'circe-msg-user' : 'circe-msg-ai';
-    el.textContent = texto;
+
+    if (imageUrl) {
+        const img = document.createElement('img');
+        img.src = imageUrl; img.className = 'circe-msg-img';
+        el.appendChild(img);
+    }
+    if (videoUrl) {
+        const vid = document.createElement('video');
+        vid.src = videoUrl; vid.controls = true;
+        vid.style.cssText = 'max-width:100%;max-height:180px;display:block;margin-bottom:6px;border:1px solid rgba(139,0,0,0.2);';
+        el.appendChild(vid);
+    }
+    if (texto) el.appendChild(document.createTextNode(texto));
+
     chat.appendChild(el);
     setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 30);
     return el;
 }
 
+// ── Enviar mensaje ────────────────────────────────────────────────────────────
 async function preguntarCirce() {
     const ta = document.getElementById('circe-pregunta');
-    const pregunta = ta.value.trim();
-    if (!pregunta) return;
+    const texto = ta.value.trim();
+    const adjunto = circeArchivoAdjunto;
+    if (!texto && !adjunto) return;
 
     const btn = document.getElementById('circe-btn-ask');
     btn.disabled = true;
     ta.value = '';
 
-    agregarMensajeCirce('user', pregunta);
-    circeHistorial.push({ role: 'user', content: pregunta });
+    // Entrada del usuario en historial
+    const msgEntry = { role: 'user', content: texto };
+    if (adjunto?.type === 'image')  msgEntry._imageData = { data: adjunto.base64, mediaType: adjunto.mediaType, previewUrl: adjunto.previewUrl };
+    if (adjunto?.type === 'video')  msgEntry._videoUrl  = adjunto.previewUrl;
+
+    agregarMensajeCirce('user', texto, {
+        imageUrl: adjunto?.type === 'image' ? adjunto.previewUrl : null,
+        videoUrl: adjunto?.type === 'video' ? adjunto.previewUrl : null
+    });
+    circeHistorial.push(msgEntry);
+    quitarArchivoCirce();
+
+    // Construir mensajes en formato API
+    const apiMessages = circeHistorial.map(m => {
+        if (m._imageData) {
+            return { role: m.role, content: [
+                { type: 'image', source: { type: 'base64', media_type: m._imageData.mediaType, data: m._imageData.data } },
+                { type: 'text', text: m.content || 'Mira esta imagen' }
+            ]};
+        }
+        if (m._videoUrl) return { role: m.role, content: (m.content ? m.content + ' ' : '') + '[La usuaria compartió un video]' };
+        return { role: m.role, content: m.content || '' };
+    });
 
     const aiEl = agregarMensajeCirce('ai', '');
     aiEl.classList.add('cine-cursor');
@@ -2072,7 +2292,7 @@ async function preguntarCirce() {
                 max_tokens: 1024,
                 stream: true,
                 system: CIRCE_SISTEMA,
-                messages: circeHistorial
+                messages: apiMessages
             })
         });
 
@@ -2083,8 +2303,7 @@ async function preguntarCirce() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = '';
-        let respuestaCompleta = '';
+        let buffer = '', respuestaCompleta = '';
         const chat = document.getElementById('circe-chat');
 
         while (true) {
@@ -2109,7 +2328,7 @@ async function preguntarCirce() {
         }
 
         circeHistorial.push({ role: 'assistant', content: respuestaCompleta });
-        localStorage.setItem('circe_historial', JSON.stringify(circeHistorial.slice(-30)));
+        guardarConversacionActual();
     } catch(e) {
         aiEl.textContent = '⚠ ' + e.message;
     }
@@ -2119,22 +2338,55 @@ async function preguntarCirce() {
     ta.focus();
 }
 
-function nuevaConversacionCirce() {
-    if (circeHistorial.length > 0 && !confirm('¿Empezar conversación nueva? El historial actual se perderá.')) return;
-    circeHistorial = [];
-    localStorage.removeItem('circe_historial');
-    document.getElementById('circe-chat').innerHTML = '';
+// ── Historial panel ───────────────────────────────────────────────────────────
+function mostrarHistorialCirce() {
+    guardarConversacionActual();
+    const convs = cargarConversaciones();
+    const lista = document.getElementById('circe-lista-convs');
+    const vacio = document.getElementById('circe-convs-vacio');
+    lista.innerHTML = '';
+
+    if (convs.length === 0) {
+        vacio.style.display = 'block';
+    } else {
+        vacio.style.display = 'none';
+        convs.forEach(conv => {
+            const item = document.createElement('div');
+            item.className = 'circe-conv-item' + (conv.id === circeConvId ? ' activa' : '');
+            const fecha = new Date(conv.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            item.innerHTML = `<div class="circe-conv-fecha">${fecha}${conv.id === circeConvId ? ' · actual' : ''}</div><div class="circe-conv-preview">${conv.preview || '...'}</div>`;
+            item.onclick = () => cargarConversacion(conv.id);
+            lista.appendChild(item);
+        });
+    }
+    mostrarEstadoCirce('historial-panel');
 }
 
-function resetCirceApiKey() {
-    if (!confirm('¿Cambiar la API key? También se limpiará la conversación.')) return;
-    localStorage.removeItem('circe_apikey');
-    localStorage.removeItem('circe_historial');
-    circeApiKey = '';
+function cerrarHistorialCirce() {
+    mostrarEstadoCirce('main');
+}
+
+function cargarConversacion(id) {
+    guardarConversacionActual();
+    const conv = cargarConversaciones().find(c => c.id === id);
+    if (!conv) return;
+    circeConvId = id;
+    localStorage.setItem('circe_conv_id', id);
+    circeHistorial = conv.messages || [];
+    renderCirceHistorial();
+    mostrarEstadoCirce('main');
+}
+
+// ── Nueva conversación ────────────────────────────────────────────────────────
+function nuevaConversacionCirce() {
+    guardarConversacionActual();
+    circeConvId = 'conv_' + Date.now();
+    localStorage.setItem('circe_conv_id', circeConvId);
     circeHistorial = [];
-    document.getElementById('circe-setup').style.display = 'block';
-    document.getElementById('circe-main').style.display = 'none';
+    quitarArchivoCirce();
     document.getElementById('circe-chat').innerHTML = '';
+    mostrarEstadoCirce('main');
+    setTimeout(() => document.getElementById('circe-pregunta').focus(), 100);
 }
 
 
