@@ -1680,7 +1680,7 @@
     <!-- SETUP -->
     <div id="circe-setup">
         <p style="font-size:0.82em; opacity:0.55; margin-bottom:20px; line-height:1.7; font-family:'Cinzel Decorative',cursive;">
-            How do i put the joker in the phantom zone, gastes route. no freeways
+            How do i put the joker in the phantom zone, fastest route. no freeways
         </p>
         <div class="tarjeta">
             <h3><i class="fas fa-key" style="margin-right:8px;"></i>API</h3>
@@ -2294,23 +2294,29 @@ async function preguntarCirce() {
     quitarArchivoCirce();
 
     // Construir mensajes en formato API
-    const apiMessages = circeHistorial.map(m => {
-        // nuevo formato multi-archivo
+    // Solo el último mensaje del usuario lleva base64; los históricos van como texto
+    const lastUserIdx = circeHistorial.reduce((acc, m, i) => m.role === 'user' ? i : acc, -1);
+    const apiMessages = circeHistorial.map((m, idx) => {
+        const esActual = idx === lastUserIdx;
         if (m._archivos?.length) {
             const blocks = [];
             for (const a of m._archivos) {
-                if (a.type === 'image' && a.base64)
-                    blocks.push({ type: 'image', source: { type: 'base64', media_type: a.mediaType, data: a.base64 } });
-                else if (a.type === 'document' && a.base64)
-                    blocks.push({ type: 'document', source: { type: 'base64', media_type: a.mediaType || 'application/pdf', data: a.base64 } });
-                else if (a.type === 'video')
-                    blocks.push({ type: 'text', text: '[La usuaria compartió un video: ' + a.nombre + ']' });
+                if (esActual) {
+                    if (a.type === 'image' && a.base64)
+                        blocks.push({ type: 'image', source: { type: 'base64', media_type: a.mediaType, data: a.base64 } });
+                    else if (a.type === 'document' && a.base64)
+                        blocks.push({ type: 'document', source: { type: 'base64', media_type: a.mediaType || 'application/pdf', data: a.base64 } });
+                    else if (a.type === 'video')
+                        blocks.push({ type: 'text', text: '[video: ' + a.nombre + ']' });
+                } else {
+                    // mensajes viejos: solo referencia de texto, sin base64
+                    blocks.push({ type: 'text', text: a.type === 'image' ? '[imagen]' : a.type === 'video' ? '[video]' : '[doc: ' + a.nombre + ']' });
+                }
             }
             if (m.content) blocks.push({ type: 'text', text: m.content });
             else if (!blocks.some(b => b.type === 'text')) blocks.push({ type: 'text', text: 'Analiza esto' });
             return { role: m.role, content: blocks };
         }
-        // compatibilidad con formato viejo
         if (m._imageData) return { role: m.role, content: [
             { type: 'image', source: { type: 'base64', media_type: m._imageData.mediaType, data: m._imageData.data } },
             { type: 'text', text: m.content || 'Mira esta imagen' }
@@ -2319,7 +2325,7 @@ async function preguntarCirce() {
             { type: 'document', source: { type: 'base64', media_type: m._docData.mediaType || 'application/pdf', data: m._docData.data } },
             { type: 'text', text: m.content || 'Analiza este documento' }
         ]};
-        if (m._videoUrl) return { role: m.role, content: (m.content ? m.content + ' ' : '') + '[La usuaria compartió un video]' };
+        if (m._videoUrl) return { role: m.role, content: (m.content ? m.content + ' ' : '') + '[video]' };
         return { role: m.role, content: m.content || '' };
     });
 
