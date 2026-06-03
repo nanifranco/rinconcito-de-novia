@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rinconcito-v6';
+const CACHE_NAME = 'rinconcito-v7';
 
 const LOCAL_ASSETS = [
   './',
