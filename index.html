@@ -2346,30 +2346,39 @@ async function preguntarCirce() {
             messages: apiMessages
         });
 
-        // Warn if payload is very large (> 30 MB)
         if (payload.length > 31457280) {
             throw new Error('El archivo es demasiado grande para enviar (>30 MB). Prueba con uno más pequeño.');
         }
 
-        const data = await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', 'https://api.anthropic.com/v1/messages');
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.setRequestHeader('x-api-key', circeApiKey);
-            xhr.setRequestHeader('anthropic-version', '2023-06-01');
-            xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
-            xhr.onload = () => {
-                try {
-                    const res = JSON.parse(xhr.responseText);
-                    if (xhr.status >= 200 && xhr.status < 300) resolve(res);
-                    else reject(new Error(res.error?.message || `Error ${xhr.status}`));
-                } catch { reject(new Error('Respuesta inválida')); }
-            };
-            xhr.onerror = () => reject(new Error('Error de red. Si el archivo es muy pesado, prueba con uno más chico.'));
-            xhr.ontimeout = () => reject(new Error('Tardó demasiado. El archivo puede ser muy pesado.'));
-            xhr.timeout = 120000;
-            xhr.send(payload);
-        });
+        const tieneArchivo = adjuntos.length > 0;
+        const data = await (function enviar(intentos) {
+            return new Promise((resolve, reject) => {
+                if (tieneArchivo) aiEl.textContent = intentos > 1 ? `Reintentando (${intentos}/3)…` : 'Enviando archivo…';
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'https://api.anthropic.com/v1/messages');
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('x-api-key', circeApiKey);
+                xhr.setRequestHeader('anthropic-version', '2023-06-01');
+                xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
+                xhr.onload = () => {
+                    try {
+                        const res = JSON.parse(xhr.responseText);
+                        if (xhr.status >= 200 && xhr.status < 300) resolve(res);
+                        else reject(new Error(res.error?.message || `Error ${xhr.status}`));
+                    } catch { reject(new Error('Respuesta inválida')); }
+                };
+                xhr.onerror = () => {
+                    if (intentos < 3) {
+                        setTimeout(() => enviar(intentos + 1).then(resolve).catch(reject), 2000 * intentos);
+                    } else {
+                        reject(new Error('Sin conexión después de 3 intentos. Revisa tu internet.'));
+                    }
+                };
+                xhr.ontimeout = () => reject(new Error('Tardó demasiado. El archivo puede ser muy pesado.'));
+                xhr.timeout = 120000;
+                xhr.send(payload);
+            });
+        })(1);
 
         const respuestaCompleta = data.content?.[0]?.text || '(sin respuesta)';
         aiEl.textContent = respuestaCompleta;
