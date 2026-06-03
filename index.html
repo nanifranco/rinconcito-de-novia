@@ -2092,14 +2092,31 @@ async function adjuntarArchivoCirce(input) {
             circeArchivosAdjuntos.push({ type: 'video', previewUrl: URL.createObjectURL(file), nombre });
         } else if (file.type.includes('pdf') || file.name.match(/\.(pdf|txt)$/i)) {
             const idx = circeArchivosAdjuntos.length;
-            circeArchivosAdjuntos.push({ type: 'document', fileId: null, nombre, subiendo: true });
+            circeArchivosAdjuntos.push({ type: 'document', fileId: null, nombre, subiendo: true, progreso: 0 });
             renderAdjuntosPreview();
             try {
-                const fileId = await subirArchivoAnthropic(file);
+                const fileId = await subirArchivoAnthropic(file, idx);
                 circeArchivosAdjuntos[idx] = { type: 'document', fileId, nombre };
             } catch(e) {
-                circeArchivosAdjuntos.splice(idx, 1);
-                alert('No se pudo subir "' + nombre + '": ' + e.message);
+                if (e.message === 'CORS_ERROR') {
+                    // Files API no soporta CORS desde browser — usar base64 como fallback
+                    try {
+                        circeArchivosAdjuntos[idx].progreso = undefined;
+                        const base64 = await new Promise((res, rej) => {
+                            const r = new FileReader();
+                            r.onload = ev => res(ev.target.result.split(',')[1]);
+                            r.onerror = rej;
+                            r.readAsDataURL(file);
+                        });
+                        circeArchivosAdjuntos[idx] = { type: 'document', base64, mediaType: file.type.includes('pdf') ? 'application/pdf' : 'text/plain', nombre };
+                    } catch {
+                        circeArchivosAdjuntos.splice(idx, 1);
+                        alert('No se pudo cargar "' + nombre + '"');
+                    }
+                } else {
+                    circeArchivosAdjuntos.splice(idx, 1);
+                    alert(e.message);
+                }
             }
             renderAdjuntosPreview();
         } else {
@@ -2109,7 +2126,7 @@ async function adjuntarArchivoCirce(input) {
     renderAdjuntosPreview();
 }
 
-async function subirArchivoAnthropic(file) {
+async function subirArchivoAnthropic(file, idx) {
     const fd = new FormData();
     fd.append('file', file);
     return new Promise((resolve, reject) => {
@@ -2119,7 +2136,13 @@ async function subirArchivoAnthropic(file) {
         xhr.setRequestHeader('anthropic-version', '2023-06-01');
         xhr.setRequestHeader('anthropic-beta', 'files-api-2025-04-14');
         xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
-        xhr.timeout = 120000;
+        xhr.timeout = 600000; // 10 min para archivos grandes
+        xhr.upload.onprogress = e => {
+            if (e.lengthComputable && idx !== undefined) {
+                circeArchivosAdjuntos[idx].progreso = Math.round(e.loaded / e.total * 100);
+                renderAdjuntosPreview();
+            }
+        };
         xhr.onload = () => {
             try {
                 const res = JSON.parse(xhr.responseText);
@@ -2127,8 +2150,8 @@ async function subirArchivoAnthropic(file) {
                 else reject(new Error(res.error?.message || `Error ${xhr.status}`));
             } catch { reject(new Error('Respuesta inválida')); }
         };
-        xhr.onerror = () => reject(new Error('Sin conexión'));
-        xhr.ontimeout = () => reject(new Error('Tiempo agotado'));
+        xhr.onerror = () => reject(new Error('CORS_ERROR'));
+        xhr.ontimeout = () => reject(new Error('El archivo tardó demasiado. Intenta con uno más pequeño.'));
         xhr.send(fd);
     });
 }
@@ -2143,8 +2166,8 @@ function renderAdjuntosPreview() {
         const chip = document.createElement('div');
         chip.className = 'adjunto-chip';
         const icon = adj.type === 'image' ? `<img src="${adj.previewUrl}">` : `<i class="fas fa-${adj.type === 'video' ? 'video' : 'file-lines'}"></i>`;
-        const estado = adj.subiendo ? ' <i class="fas fa-spinner fa-spin" style="font-size:0.8em;opacity:0.5;"></i>' : '';
-        chip.innerHTML = `${icon}<span>${adj.nombre}${estado}</span>${adj.subiendo ? '' : `<button onclick="quitarAdjunto(${i})">&times;</button>`}`;
+        const progTxt = adj.subiendo ? ` <span style="opacity:0.5;font-size:0.9em">${adj.progreso !== undefined ? adj.progreso + '%' : '…'}</span>` : '';
+        chip.innerHTML = `${icon}<span>${adj.nombre}${progTxt}</span>${adj.subiendo ? '' : `<button onclick="quitarAdjunto(${i})">&times;</button>`}`;
         chips.appendChild(chip);
     });
 }
