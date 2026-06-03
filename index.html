@@ -1731,12 +1731,12 @@
             <textarea id="circe-pregunta" rows="3" placeholder="Escribe a Circe..." class="cine-input"
                 style="resize:none; line-height:1.6; margin:0; padding-right:76px;"
                 onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();preguntarCirce();}"></textarea>
-            <input type="file" id="circe-file-input" accept="image/*,video/*" style="display:none" onchange="adjuntarArchivoCirce(this)">
+            <input type="file" id="circe-file-input" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" onchange="adjuntarArchivoCirce(this)">
             <div style="position:absolute; right:8px; bottom:10px; display:flex; gap:4px; align-items:center;">
-                <button onclick="document.getElementById('circe-file-input').click()"
-                    style="background:none; border:none; color:rgba(224,224,224,0.28); cursor:pointer; font-size:1.05em; padding:4px;" title="Adjuntar foto o video">
+                <label for="circe-file-input"
+                    style="color:rgba(224,224,224,0.28); cursor:pointer; font-size:1.05em; padding:4px; display:flex; align-items:center; line-height:1;" title="Adjuntar foto, video o documento">
                     <i class="fas fa-paperclip"></i>
-                </button>
+                </label>
                 <button id="circe-btn-ask" onclick="preguntarCirce()"
                     style="background:none; border:none; color:var(--color-primario); cursor:pointer; font-size:1.15em; padding:4px;" title="Enviar (Ctrl+Enter)">
                     <i class="fas fa-paper-plane"></i>
@@ -2104,8 +2104,9 @@ function comprimirImagen(file, maxDim = 1024, quality = 0.82) {
 async function adjuntarArchivoCirce(input) {
     const file = input.files[0];
     if (!file) return;
-    input.value = '';
-    const nombre = file.name.length > 28 ? file.name.slice(0, 25) + '...' : file.name;
+    // reset so the same file can be picked again
+    setTimeout(() => { input.value = ''; }, 100);
+    const nombre = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
 
     if (file.type.startsWith('image/')) {
         const comp = await comprimirImagen(file);
@@ -2119,8 +2120,19 @@ async function adjuntarArchivoCirce(input) {
         const vid = document.getElementById('circe-adjunto-video');
         vid.src = url; vid.style.display = 'block';
         document.getElementById('circe-adjunto-thumb').style.display = 'none';
+    } else if (file.type === 'application/pdf' || file.name.match(/\.(pdf|doc|docx|txt)$/i)) {
+        // Leer como base64 para enviarlo a Claude
+        const base64 = await new Promise(res => {
+            const reader = new FileReader();
+            reader.onload = e => res(e.target.result.split(',')[1]);
+            reader.readAsDataURL(file);
+        });
+        const mediaType = file.type || 'application/pdf';
+        circeArchivoAdjunto = { type: 'document', base64, mediaType, nombre };
+        document.getElementById('circe-adjunto-thumb').style.display = 'none';
+        document.getElementById('circe-adjunto-video').style.display = 'none';
     } else {
-        alert('Solo se admiten imágenes y videos'); return;
+        alert('Formato no compatible. Puedes subir imágenes, videos o documentos PDF/Word/TXT.'); return;
     }
     document.getElementById('circe-adjunto-nombre').textContent = nombre;
     document.getElementById('circe-adjunto-preview').style.display = 'flex';
@@ -2139,6 +2151,7 @@ function sanitizarMsgs(msgs) {
         const s = { role: m.role, content: m.content || '' };
         if (m._imageData) s.content = (s.content ? s.content + ' ' : '') + '[imagen]';
         if (m._videoUrl)  s.content = (s.content ? s.content + ' ' : '') + '[video]';
+        if (m._docData)   s.content = (s.content ? s.content + ' ' : '') + `[doc: ${m._docData.nombre || 'archivo'}]`;
         return s;
     });
 }
@@ -2210,14 +2223,15 @@ function renderCirceHistorial() {
     chat.innerHTML = '';
     circeHistorial.forEach(msg => {
         agregarMensajeCirce(msg.role === 'user' ? 'user' : 'ai', msg.content || '', {
-            imageUrl: msg._imageData?.previewUrl || null,
-            videoUrl: msg._videoUrl || null
+            imageUrl:  msg._imageData?.previewUrl || null,
+            videoUrl:  msg._videoUrl || null,
+            docNombre: msg._docData?.nombre || null
         });
     });
     setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 60);
 }
 
-function agregarMensajeCirce(rol, texto, { imageUrl, videoUrl } = {}) {
+function agregarMensajeCirce(rol, texto, { imageUrl, videoUrl, docNombre } = {}) {
     const chat = document.getElementById('circe-chat');
     const el = document.createElement('div');
     el.className = rol === 'user' ? 'circe-msg-user' : 'circe-msg-ai';
@@ -2232,6 +2246,12 @@ function agregarMensajeCirce(rol, texto, { imageUrl, videoUrl } = {}) {
         vid.src = videoUrl; vid.controls = true;
         vid.style.cssText = 'max-width:100%;max-height:180px;display:block;margin-bottom:6px;border:1px solid rgba(139,0,0,0.2);';
         el.appendChild(vid);
+    }
+    if (docNombre) {
+        const chip = document.createElement('div');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:rgba(139,0,0,0.12);border:1px solid rgba(139,0,0,0.25);padding:4px 10px;font-family:"Cinzel Decorative",cursive;font-size:0.7em;margin-bottom:6px;';
+        chip.innerHTML = '<i class="fas fa-file-lines"></i> ' + docNombre;
+        el.appendChild(chip);
     }
     if (texto) el.appendChild(document.createTextNode(texto));
 
@@ -2253,12 +2273,14 @@ async function preguntarCirce() {
 
     // Entrada del usuario en historial
     const msgEntry = { role: 'user', content: texto };
-    if (adjunto?.type === 'image')  msgEntry._imageData = { data: adjunto.base64, mediaType: adjunto.mediaType, previewUrl: adjunto.previewUrl };
-    if (adjunto?.type === 'video')  msgEntry._videoUrl  = adjunto.previewUrl;
+    if (adjunto?.type === 'image')    msgEntry._imageData = { data: adjunto.base64, mediaType: adjunto.mediaType, previewUrl: adjunto.previewUrl };
+    if (adjunto?.type === 'video')    msgEntry._videoUrl  = adjunto.previewUrl;
+    if (adjunto?.type === 'document') msgEntry._docData   = { data: adjunto.base64, mediaType: adjunto.mediaType, nombre: adjunto.nombre };
 
     agregarMensajeCirce('user', texto, {
-        imageUrl: adjunto?.type === 'image' ? adjunto.previewUrl : null,
-        videoUrl: adjunto?.type === 'video' ? adjunto.previewUrl : null
+        imageUrl:  adjunto?.type === 'image'    ? adjunto.previewUrl : null,
+        videoUrl:  adjunto?.type === 'video'    ? adjunto.previewUrl : null,
+        docNombre: adjunto?.type === 'document' ? adjunto.nombre     : null
     });
     circeHistorial.push(msgEntry);
     quitarArchivoCirce();
@@ -2269,6 +2291,12 @@ async function preguntarCirce() {
             return { role: m.role, content: [
                 { type: 'image', source: { type: 'base64', media_type: m._imageData.mediaType, data: m._imageData.data } },
                 { type: 'text', text: m.content || 'Mira esta imagen' }
+            ]};
+        }
+        if (m._docData) {
+            return { role: m.role, content: [
+                { type: 'document', source: { type: 'base64', media_type: m._docData.mediaType || 'application/pdf', data: m._docData.data } },
+                { type: 'text', text: m.content || 'Analiza este documento' }
             ]};
         }
         if (m._videoUrl) return { role: m.role, content: (m.content ? m.content + ' ' : '') + '[La usuaria compartió un video]' };
@@ -2341,6 +2369,11 @@ async function preguntarCirce() {
 // ── Historial panel ───────────────────────────────────────────────────────────
 function mostrarHistorialCirce() {
     guardarConversacionActual();
+    renderListaConversaciones();
+    mostrarEstadoCirce('historial-panel');
+}
+
+function renderListaConversaciones() {
     const convs = cargarConversaciones();
     const lista = document.getElementById('circe-lista-convs');
     const vacio = document.getElementById('circe-convs-vacio');
@@ -2353,13 +2386,40 @@ function mostrarHistorialCirce() {
         convs.forEach(conv => {
             const item = document.createElement('div');
             item.className = 'circe-conv-item' + (conv.id === circeConvId ? ' activa' : '');
+            item.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+            const info = document.createElement('div');
+            info.style.cssText = 'flex:1;min-width:0;cursor:pointer;';
             const fecha = new Date(conv.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            item.innerHTML = `<div class="circe-conv-fecha">${fecha}${conv.id === circeConvId ? ' · actual' : ''}</div><div class="circe-conv-preview">${conv.preview || '...'}</div>`;
-            item.onclick = () => cargarConversacion(conv.id);
+            info.innerHTML = `<div class="circe-conv-fecha">${fecha}${conv.id === circeConvId ? ' · actual' : ''}</div><div class="circe-conv-preview">${conv.preview || '...'}</div>`;
+            info.onclick = () => cargarConversacion(conv.id);
+
+            const btnBorrar = document.createElement('button');
+            btnBorrar.innerHTML = '<i class="fas fa-trash-can"></i>';
+            btnBorrar.title = 'Borrar conversación';
+            btnBorrar.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:0.8em;padding:4px 6px;flex-shrink:0;transition:color 0.2s;';
+            btnBorrar.onmouseover = () => { btnBorrar.style.color = 'var(--color-primario)'; };
+            btnBorrar.onmouseout  = () => { btnBorrar.style.color = 'rgba(255,255,255,0.2)'; };
+            btnBorrar.onclick = (e) => { e.stopPropagation(); borrarConversacion(conv.id); };
+
+            item.appendChild(info);
+            item.appendChild(btnBorrar);
             lista.appendChild(item);
         });
     }
-    mostrarEstadoCirce('historial-panel');
+}
+
+function borrarConversacion(id) {
+    let convs = cargarConversaciones().filter(c => c.id !== id);
+    localStorage.setItem('circe_conversations', JSON.stringify(convs));
+    // Si borramos la conversación activa, empezar una nueva
+    if (id === circeConvId) {
+        circeConvId = 'conv_' + Date.now();
+        localStorage.setItem('circe_conv_id', circeConvId);
+        circeHistorial = [];
+        document.getElementById('circe-chat').innerHTML = '';
+    }
+    renderListaConversaciones();
 }
 
 function cerrarHistorialCirce() {
